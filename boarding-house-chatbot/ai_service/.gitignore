@@ -1,0 +1,15 @@
+# Virtual environments
+venv/
+.env/
+
+# Python bytecode files
+*.pyc
+*.pyo
+__pycache__/
+
+# IDEs and editors
+.idea/
+.vscode/
+
+# Other possible directories to ignore
+*.log
