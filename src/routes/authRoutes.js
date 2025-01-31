@@ -1,84 +1,70 @@
 const express = require('express');
 const router = express.Router();
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const User = require('../models/User');
-const { protect } = require('../middleware/authMiddleware');
+const passport = require('passport');
+const {
+    signup,
+    login,
+    socialAuth,
+    verifyEmail
+} = require('../controllers/authController');
+const {
+    validateSignup,
+    validateLogin
+} = require('../validators/authValidators');
 
-// Register a new user
-router.post('/register', async (req, res) => {
-    const { name, email, password, role } = req.body;
+// Local authentication
+router.post('/signup', validateSignup, signup);
+router.post('/login', validateLogin, login);
+router.get('/verify-email', verifyEmail);
 
-    try {
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ message: 'User already exists' });
+// Google authentication
+router.get('/google', passport.authenticate('google', {
+    scope: ['profile', 'email'],
+    prompt: 'select_account'
+}));
+
+router.get('/google/callback',
+    passport.authenticate('google', { session: false }),
+    async (req, res, next) => {
+        try {
+            const result = await socialAuth(req.user, 'google');
+            
+            if (result.success) {
+                return res.redirect(
+                    `${process.env.CLIENT_URL}/auth/success?token=${result.token}`
+                );
+            }
+            
+            res.redirect(`${process.env.CLIENT_URL}/login?error=social-auth-failed`);
+        } catch (err) {
+            next(err);
         }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-
-        const user = new User({
-            name,
-            email,
-            password: hashedPassword,
-            role, // "student" or "landlord"
-        });
-
-        const savedUser = await user.save();
-
-        res.status(201).json({
-            _id: savedUser._id,
-            name: savedUser.name,
-            email: savedUser.email,
-            role: savedUser.role,
-            token: generateToken(savedUser._id),
-        });
-    } catch (error) {
-        res.status(500).json({ message: 'Server error' });
     }
-});
+);
 
-// Login user
-router.post('/login', async (req, res) => {
-    const { email, password } = req.body;
+// Facebook authentication
+router.get('/facebook', passport.authenticate('facebook', {
+    scope: ['email'],
+    authType: 'rerequest'
+}));
 
-    try {
-        const user = await User.findOne({ email });
-
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
+router.get('/facebook/callback',
+    passport.authenticate('facebook', { session: false }),
+    async (req, res, next) => {
+        try {
+            const result = await socialAuth(req.user, 'facebook');
+            
+            if (result.success) {
+                return res.redirect(
+                    `${process.env.CLIENT_URL}/auth/success?token=${result.token}`
+                );
+            }
+            
+            res.redirect(`${process.env.CLIENT_URL}/login?error=social-auth-failed`);
+        } catch (err) {
+            next(err);
         }
-
-        const isPasswordCorrect = await bcrypt.compare(password, user.password);
-        if (!isPasswordCorrect) {
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
-
-        res.status(200).json({
-            _id: user._id,
-            name: user.name,
-            email: user.email,
-            role: user.role,
-            token: generateToken(user._id),
-        });
-    } catch (error) {
-        res.status(500).json({ message: 'Server error' });
     }
-});
-
-// Protected route example
-router.get('/profile', protect, async (req, res) => {
-    try {
-        const user = await User.findById(req.user.id).select('-password');
-        res.json(user);
-    } catch (error) {
-        res.status(500).json({ message: 'Server error' });
-    }
-});
-
-// Generate JWT
-function generateToken(id) {
-    return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
-}
+);
 
 module.exports = router;

@@ -12,14 +12,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Routes
-app.use("/api/auth", require("./routes/authRoutes"));
-app.use("/api/users", require("./routes/userRoutes"));
-app.use("/api/listings", require("./routes/listingRoutes"));
-app.use("/api/payments", require("./routes/paymentRoutes"));
+// // Routes
+// app.use("/api/auth", require("./routes/authRoutes"));
+// app.use("/api/users", require("./routes/userRoutes"));
+// app.use("/api/listings", require("./routes/listingRoutes"));
+// app.use("/api/payments", require("./routes/paymentRoutes"));
 
-// Error handling middleware
-const { errorHandler } = require("./middlewares/errorHandler");
-app.use(errorHandler);
+// // Error handling middleware
+// const { errorHandler } = require("./middlewares/errorHandler");
+// app.use(errorHandler);
 
 module.exports = app;
