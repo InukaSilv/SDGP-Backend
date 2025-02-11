@@ -6,7 +6,7 @@ const {
     login,
     socialAuth,
     verifyEmail
-} = require('../controllers/authController');
+} = require('../controllers/authcontroller');
 const {
     validateSignup,
     validateLogin
@@ -62,6 +62,12 @@ router.get('/facebook/callback',
             
             res.redirect(`${process.env.CLIENT_URL}/login?error=social-auth-failed`);
         } catch (err) {
+            next(err);
+        }
+    }
+);
+
+    } catch (err) {
             next(err);
         }
     }

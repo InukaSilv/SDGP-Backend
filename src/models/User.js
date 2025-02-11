@@ -1,3 +1,4 @@
+
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
@@ -91,5 +92,8 @@ UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ username: 1 }, { unique: true });
 UserSchema.index({ 'socialAuth.googleId': 1 });
 UserSchema.index({ 'socialAuth.facebookId': 1 });
+
+module.exports = mongoose.model('Users', UserSchema);
+index({ 'socialAuth.facebookId': 1 });
 
 module.exports = mongoose.model('User', UserSchema);
