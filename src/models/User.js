@@ -1,4 +1,3 @@
-
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
@@ -19,7 +18,7 @@ const UserSchema = new mongoose.Schema({
         unique: true,
         minlength: 3,
         maxlength: 20,
-        match: [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers and underscores']
+        match: [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores']
     },
     email: {
         type: String,
@@ -75,9 +74,9 @@ const UserSchema = new mongoose.Schema({
 });
 
 // Password hashing middleware
-UserSchema.pre('save', async function(next) {
+UserSchema.pre('save', async function (next) {
     if (!this.isModified('password')) return next();
-    
+
     try {
         const salt = await bcrypt.genSalt(12);
         this.password = await bcrypt.hash(this.password, salt);
@@ -87,13 +86,8 @@ UserSchema.pre('save', async function(next) {
     }
 });
 
-// Indexes
-UserSchema.index({ email: 1 }, { unique: true });
-UserSchema.index({ username: 1 }, { unique: true });
+// Indexes (Avoid duplicates)
 UserSchema.index({ 'socialAuth.googleId': 1 });
 UserSchema.index({ 'socialAuth.facebookId': 1 });
 
-module.exports = mongoose.model('Users', UserSchema);
-index({ 'socialAuth.facebookId': 1 });
-
-module.exports = mongoose.model('User', UserSchema);
+module.exports = mongoose.model('User', UserSchema);    

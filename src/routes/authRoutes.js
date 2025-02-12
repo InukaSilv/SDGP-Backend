@@ -1,21 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const passport = require('passport');
-const {
-    signup,
-    login,
-    socialAuth,
-    verifyEmail
-} = require('../controllers/authcontroller');
-const {
-    validateSignup,
-    validateLogin
-} = require('../validators/authValidators');
+const { signup, login, socialAuth } = require('../controllers/authcontroller');
+const { validateSignup, validateLogin } = require('../validators/authValidators');
 
 // Local authentication
 router.post('/signup', validateSignup, signup);
 router.post('/login', validateLogin, login);
-router.get('/verify-email', verifyEmail);
 
 // Google authentication
 router.get('/google', passport.authenticate('google', {
@@ -62,12 +53,6 @@ router.get('/facebook/callback',
             
             res.redirect(`${process.env.CLIENT_URL}/login?error=social-auth-failed`);
         } catch (err) {
-            next(err);
-        }
-    }
-);
-
-    } catch (err) {
             next(err);
         }
     }

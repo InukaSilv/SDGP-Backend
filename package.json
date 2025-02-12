@@ -19,6 +19,8 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "express-validator": "^7.2.1",
+    "firebase": "^11.3.1",
+    "firebase-admin": "^13.1.0",
     "gauge": "^5.0.2",
     "glob": "^11.0.0",
     "jsonwebtoken": "^9.0.2",

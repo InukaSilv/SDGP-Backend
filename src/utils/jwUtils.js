@@ -27,6 +27,3 @@ module.exports = {
   generateToken,
   verifyToken
 };
-Token,
-    verifyToken
-};
