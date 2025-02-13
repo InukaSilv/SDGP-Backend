@@ -12,14 +12,6 @@ const UserSchema = new mongoose.Schema({
         required: [true, 'Last name is required'],
         trim: true
     },
-    username: {
-        type: String,
-        required: [true, 'Username is required'],
-        unique: true,
-        minlength: 3,
-        maxlength: 20,
-        match: [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores']
-    },
     email: {
         type: String,
         required: [true, 'Email is required'],
@@ -58,10 +50,6 @@ const UserSchema = new mongoose.Schema({
     isPhoneVerified: {
         type: Boolean,
         default: false
-    },
-    socialAuth: {
-        googleId: String,
-        facebookId: String
     },
     verificationToken: String,
     verificationTokenExpires: Date,
