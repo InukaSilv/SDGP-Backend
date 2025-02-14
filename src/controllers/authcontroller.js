@@ -23,35 +23,22 @@ exports.signup = async (req, res, next) => {
     try {
         const {  fname, lname, email, phone, dob, password , isPremium, idToken, role } = req.body;
 
-        // // Verify Firebase token
-        // const decodedToken = await verifyFirebaseToken(idToken);
+        // Verify Firebase token
+        const decodedToken = await verifyFirebaseToken(idToken);
 
-        // // Ensure email is verified before saving user
-        // if (!decodedToken.email_verified) {
-        //     return res.status(400).json({ success: false, message: 'Email not verified' });
-        // }
+        // Ensure email is verified before saving user
+        if (!decodedToken.email_verified) {
+            return res.status(400).json({ success: false, message: 'Email not verified' });
+        }
 
-        // // Check if user already exists
-        // const existingUser = await User.findOne({ email: decodedToken.email });
-        // if (existingUser) {
-        //     return res.status(400).json({ success: false, message: 'User already exists' });
-        // }
+        const existingUser = await User.findOne({ email: decodedToken.email });
+        // Check if user already exists
+        if (existingUser) {
+            return res.status(400).json({ success: false, message: 'User already exists' });
+        }
 
         // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        // // Create new user in MongoDB
-        // const newUser = new User({
-        //     firstName: fname,
-        //     lastName: lname,
-        //     email: email,
-        //     password: hashedPassword, // Store password for future logins
-        //     phone,
-        //     dob,
-        //     role,
-        //     isPremium,
-        //     isEmailVerified: true // Firebase handles verification
-        // });
 
         const newUser = new User({
             firstName: fname,

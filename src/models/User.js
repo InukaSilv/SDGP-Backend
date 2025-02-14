@@ -27,7 +27,7 @@ const UserSchema = new mongoose.Schema({
     phone: {
         type: String,
         required: [true, 'Phone number is required'],
-        match: [/^\+94\d{9}$/, 'Invalid Sri Lankan phone number format']
+        match: [/^0\d{9}$/, 'Invalid Sri Lankan phone number format, phone number must start from 0 and should exactly have 10 characters']
     },
     dob: {
         type: Date,
@@ -35,9 +35,9 @@ const UserSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['student', 'landlord'],
+        enum: ['Student', 'Landlord'],
         required: [true, 'Role is required'],
-        default: 'student'
+        default: 'Student'
     },
     isPremium: {
         type: Boolean,
