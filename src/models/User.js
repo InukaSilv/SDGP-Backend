@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const { type } = require("os");
 
 const UserSchema = new mongoose.Schema({
     firstName: {
@@ -38,6 +39,12 @@ const UserSchema = new mongoose.Schema({
         enum: ['Student', 'Landlord'],
         required: [true, 'Role is required'],
         default: 'Student'
+    },
+    registerType:{
+        type:string,
+        enum:['password','google'],
+        requried:[true,'Registration type is required'],
+        default:'password'
     },
     isPremium: {
         type: Boolean,

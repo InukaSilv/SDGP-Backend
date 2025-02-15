@@ -21,7 +21,7 @@ const verifyFirebaseToken = async (idToken) => {
  */
 exports.signup = async (req, res, next) => {
     try {
-        const {  fname, lname, email, phone, dob, password , isPremium, idToken, role } = req.body;
+        const {  fname, lname, email, phone, dob, password , registerType , isPremium, idToken, role } = req.body;
 
         // Verify Firebase token
         const decodedToken = await verifyFirebaseToken(idToken);
@@ -47,6 +47,7 @@ exports.signup = async (req, res, next) => {
             phone,
             dob,
             password: hashedPassword, // Store hashed password
+            registerType,
             isPremium,
             isEmailVerified: true,
             role
@@ -69,16 +70,15 @@ exports.signup = async (req, res, next) => {
  */
 exports.login = async (req, res, next) => {
     try {
-        const { emailOrUsername, password } = req.body;
+       const {idToken} = req.body;
 
-        // Find user by email or username
-        const user = await User.findOne({
-            $or: [{ email: emailOrUsername }, { username: emailOrUsername }]
-        }).select('+password');
+       const decodedToken = await admin.auth().verifyIdToken(idToken);
+       const email = decodedToken.email;
 
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
-        }
+       let user = await User.findOne({email});
+       if(!user){
+        return res.status(401).json({success:false,message:'User not found'});
+       }
 
         // Generate JWT token
         const token = generateToken({ userId: user._id });
