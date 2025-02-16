@@ -21,7 +21,7 @@ const verifyFirebaseToken = async (idToken) => {
  */
 exports.signup = async (req, res, next) => {
     try {
-        const { idToken, username, phone, dob, role, isPremium, password } = req.body;
+        const {  fname, lname, email, phone, dob, password , registerType , isPremium, idToken, role } = req.body;
 
         // Verify Firebase token
         const decodedToken = await verifyFirebaseToken(idToken);
@@ -31,8 +31,8 @@ exports.signup = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'Email not verified' });
         }
 
-        // Check if user already exists
         const existingUser = await User.findOne({ email: decodedToken.email });
+        // Check if user already exists
         if (existingUser) {
             return res.status(400).json({ success: false, message: 'User already exists' });
         }
@@ -40,18 +40,17 @@ exports.signup = async (req, res, next) => {
         // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create new user in MongoDB
         const newUser = new User({
-            firstName: decodedToken.name?.split(' ')[0] || '',
-            lastName: decodedToken.name?.split(' ')[1] || '',
-            username,
-            email: decodedToken.email,
-            password: hashedPassword, // Store password for future logins
+            firstName: fname,
+            lastName: lname,
+            email,
             phone,
             dob,
-            role,
+            password: hashedPassword, // Store hashed password
+            registerType,
             isPremium,
-            isEmailVerified: true // Firebase handles verification
+            isEmailVerified: true,
+            role
         });
 
         await newUser.save();
@@ -62,7 +61,7 @@ exports.signup = async (req, res, next) => {
         res.status(201).json({ success: true, message: 'User registered successfully', token, user: newUser });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ success: false, message: 'Signup failed' });
+        res.status(500).json({ success: false, message: 'Signup failed yakoo' });
     }
 };
 
@@ -71,16 +70,15 @@ exports.signup = async (req, res, next) => {
  */
 exports.login = async (req, res, next) => {
     try {
-        const { emailOrUsername, password } = req.body;
+       const {idToken} = req.body;
 
-        // Find user by email or username
-        const user = await User.findOne({
-            $or: [{ email: emailOrUsername }, { username: emailOrUsername }]
-        }).select('+password');
+       const decodedToken = await admin.auth().verifyIdToken(idToken);
+       const email = decodedToken.email;
 
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(401).json({ success: false, message: 'Invalid credentials' });
-        }
+       let user = await User.findOne({email});
+       if(!user){
+        return res.status(401).json({success:false,message:'User not found'});
+       }
 
         // Generate JWT token
         const token = generateToken({ userId: user._id });

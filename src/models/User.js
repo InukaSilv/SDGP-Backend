@@ -1,5 +1,6 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const { type } = require("os");
 
 const UserSchema = new mongoose.Schema({
     firstName: {
@@ -11,14 +12,6 @@ const UserSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Last name is required'],
         trim: true
-    },
-    username: {
-        type: String,
-        required: [true, 'Username is required'],
-        unique: true,
-        minlength: 3,
-        maxlength: 20,
-        match: [/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores']
     },
     email: {
         type: String,
@@ -35,7 +28,7 @@ const UserSchema = new mongoose.Schema({
     phone: {
         type: String,
         required: [true, 'Phone number is required'],
-        match: [/^\+94\d{9}$/, 'Invalid Sri Lankan phone number format']
+        match: [/^0\d{9}$/, 'Invalid Sri Lankan phone number format, phone number must start from 0 and should exactly have 10 characters']
     },
     dob: {
         type: Date,
@@ -43,9 +36,15 @@ const UserSchema = new mongoose.Schema({
     },
     role: {
         type: String,
-        enum: ['student', 'landlord'],
+        enum: ['Student', 'Landlord'],
         required: [true, 'Role is required'],
-        default: 'student'
+        default: 'Student'
+    },
+    registerType:{
+        type:string,
+        enum:['password','google'],
+        requried:[true,'Registration type is required'],
+        default:'password'
     },
     isPremium: {
         type: Boolean,
@@ -58,10 +57,6 @@ const UserSchema = new mongoose.Schema({
     isPhoneVerified: {
         type: Boolean,
         default: false
-    },
-    socialAuth: {
-        googleId: String,
-        facebookId: String
     },
     verificationToken: String,
     verificationTokenExpires: Date,
