@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const { protect } = require('../middleware/authMiddleware');
+const stripe = require("stripe")(process.env.STRIPE_API_KEY);
+const { protect } = require('../middlewares/authMiddleware');
 const logger = require('../utils/logger');
 
 // Create a payment intent

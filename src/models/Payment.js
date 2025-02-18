@@ -10,3 +10,5 @@ const paymentSchema = new mongoose.Schema({
   transactionId: { type: String, unique: true },
   createdAt: { type: Date, default: Date.now },
 });
+
+module.exports = mongoose.model("Payment", paymentSchema);
