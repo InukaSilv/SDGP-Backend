@@ -1,7 +1,8 @@
 const User = require('../models/User');
-const bcrypt = require('bcryptjs');
+// const bcrypt = require('bcryptjs');
 const { generateToken } = require('../utils/jwUtils');
 const admin = require('../config/firebaseAdmin'); // Firebase Admin SDK
+const { getAuth } = require("firebase-admin/auth");
 
 /**
  * Verify Firebase ID token (Only during signup)
@@ -21,7 +22,7 @@ const verifyFirebaseToken = async (idToken) => {
  */
 exports.signup = async (req, res, next) => {
     try {
-        const {  fname, lname, email, phone, dob, password , registerType , isPremium, idToken, role } = req.body;
+        const {  fname, lname, email, phone, dob, registerType , isPremium, idToken, role } = req.body;
 
         // Verify Firebase token
         const decodedToken = await verifyFirebaseToken(idToken);
@@ -37,8 +38,6 @@ exports.signup = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'User already exists' });
         }
 
-        // Hash the password
-        const hashedPassword = await bcrypt.hash(password, 10);
 
         const newUser = new User({
             firstName: fname,
@@ -46,7 +45,6 @@ exports.signup = async (req, res, next) => {
             email,
             phone,
             dob,
-            password: hashedPassword, // Store hashed password
             registerType,
             isPremium,
             isEmailVerified: true,
@@ -89,6 +87,39 @@ exports.login = async (req, res, next) => {
         res.status(500).json({ success: false, message: 'Login failed' });
     }
 };
+
+
+/**
+ * checking for email for reset password
+ */
+exports.checkForForget = async (req,res) =>{
+    try{
+        const {email} = req.body;
+        console.log("email came")
+        if(!email){
+            return res.status(400).json({success:false, message:'email not found'})
+        }
+
+        const user = await User.findOne({email});
+        console.log("Found user",user)
+        // If the user doesn't exist
+        if (!user) {
+            return res.json({ exists: false });
+        }
+
+        // If the user exists and is using password-based registration
+        if (user.registerType === "password") {
+            return res.json({ exists: true, isUsingPassword: true });
+        }
+
+        // If the user is registered but not using password-based login (social login)
+        return res.json({ exists: true, isUsingPassword: false });
+    }catch(error){
+        console.error("Error checking user:", error);
+        res.status(500).json({ error: "Internal Server Error" });
+    }
+}
+
 
 /**
  * Social Authentication (Google, Facebook)

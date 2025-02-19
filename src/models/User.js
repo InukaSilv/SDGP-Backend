@@ -5,12 +5,12 @@ const { type } = require("os");
 const UserSchema = new mongoose.Schema({
     firstName: {
         type: String,
-        required: [true, 'First name is required'],
+        required: function(){ return this.registerType === "password";},
         trim: true
     },
     lastName: {
         type: String,
-        required: [true, 'Last name is required'],
+        required: function(){ return this.registerType === "password";},
         trim: true
     },
     email: {
@@ -20,19 +20,14 @@ const UserSchema = new mongoose.Schema({
         lowercase: true,
         match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Invalid email format']
     },
-    password: {
-        type: String,
-        select: false,
-        minlength: 8
-    },
     phone: {
         type: String,
-        required: [true, 'Phone number is required'],
+        required: function(){ return this.registerType === "password";},
         match: [/^0\d{9}$/, 'Invalid Sri Lankan phone number format, phone number must start from 0 and should exactly have 10 characters']
     },
     dob: {
         type: Date,
-        required: [true, 'Date of birth is required']
+        required: function(){ return this.registerType === "password";}
     },
     role: {
         type: String,
@@ -40,8 +35,8 @@ const UserSchema = new mongoose.Schema({
         required: [true, 'Role is required'],
         default: 'Student'
     },
-    registerType:{
-        type:string,
+    registerType: {
+        type: String,
         enum:['password','google'],
         requried:[true,'Registration type is required'],
         default:'password'
@@ -69,17 +64,17 @@ const UserSchema = new mongoose.Schema({
 });
 
 // Password hashing middleware
-UserSchema.pre('save', async function (next) {
-    if (!this.isModified('password')) return next();
+// UserSchema.pre('save', async function (next) {
+//     if (!this.isModified('password')) return next();
 
-    try {
-        const salt = await bcrypt.genSalt(12);
-        this.password = await bcrypt.hash(this.password, salt);
-        next();
-    } catch (err) {
-        next(err);
-    }
-});
+//     try {
+//         const salt = await bcrypt.genSalt(12);
+//         this.password = await bcrypt.hash(this.password, salt);
+//         next();
+//     } catch (err) {
+//         next(err);
+//     }
+// });
 
 // Indexes (Avoid duplicates)
 UserSchema.index({ 'socialAuth.googleId': 1 });

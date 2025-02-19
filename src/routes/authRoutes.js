@@ -1,12 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const passport = require('passport');
-const { signup, login, socialAuth } = require('../controllers/authcontroller');
+const { signup, login, socialAuth,checkForForget } = require('../controllers/authcontroller');
 const { validateSignup, validateLogin } = require('../validators/authValidators');
+
 
 // Local authentication
 router.post('/signup', validateSignup, signup);
 router.post('/login', validateLogin, login);
+router.post('/checkforforget',checkForForget);
 
 // Google authentication
 router.get('/google', passport.authenticate('google', {
