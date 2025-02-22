@@ -2,7 +2,9 @@ from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 
+#S-BERT model
 model = SentenceTransformer('all-MiniLM-L6-v2')
+
 
 listings = [
     "Affordable boarding house near university with WiFi.",
@@ -10,7 +12,9 @@ listings = [
     "Budget-friendly room for students, near public transport."
 ]
 
+#Convert the data into embeddings
 listing_embeddings = model.encode(listings)
+
 
 dimension = listing_embeddings.shape[1]
 index = faiss.IndexFlatL2(dimension)

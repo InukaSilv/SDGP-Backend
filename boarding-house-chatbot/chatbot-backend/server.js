@@ -1,63 +1,78 @@
 const express = require("express");
-const mysql = require("mysql2");
+const mysql = require("mysql2/promise");
 const axios = require("axios");
 const cors = require("cors");
-const socketIo = require("socket.io");
-const http = require("http");
+const dbConfig = require('./config/db.config');
+require('dotenv').config();
 
 const app = express();
-const server = http.createServer(app);
-const io = socketIo(server);
 
 app.use(express.json());
 app.use(cors());
 
-//MySQL setup
-const db = mysql.createConnection({
-    host: "localhost",
-    user: "root",
-    password: "Hasindu@123",
-    database: "chatbot_db",
-});
+//Create connection
+const pool = mysql.createPool(dbConfig);
 
-db.connect((err) => {
-    if (err) {
-      console.error("Database connection failed:", err.stack);
-      return;
+//Check database connection
+app.use(async (req, res, next) =>{
+    try{
+        const connection = await pool.getConnection();
+        await connection.release();
+        next();
+    } catch (error) {
+        console.error('Database connection failed:', error);
+        res.status(500).json({ error: 'Database connection failed'});
     }
-    console.log("Connected to MySQL database");
 });
 
-//Websockets for real-time chats
-io.on("connection", (socket) => {
-    console.log("User connected:", socket.id);
+//Route to handle chat messages
+app.post('api/chat', async (req, res) => {
+    const { userId, message, conversationId } = req.body; 
 
-    socket.on("sendMessage", async (data) => {
-        const { userId, message } = data;
-        const botResponse = await axios.post("http://localhost:5000/chat", { message });
+    if (!userId || !message || !conversationId) {
+        return res.status(400).json({ error: 'Missing required fields' });
+    }
 
-        //Store chats
-        const query = "INSERT INTO chat_history (user_id, user_message, bot_response) VALUES (?, ?, ?)";
-        db.query(query, [userId, message, botResponse.data.response], (err, results) => {
-            if(err) {
-                console.error("Error saving chats", err);
-            } else {
-                console.log("Chat saved", results);
-            }
+    try{
+        //Forward request to AI service
+        const aiResponse = await axios.post(`${process.env.AI_SERVICE_URL}/chat`,{
+            user_id: userId,
+            message: message,
+            conversation_id: conversationId
         });
 
-        //Emit responses to frontend
-        socket.emit("recieveMessage", { sender: "bot", message: botResponse.data.response });
-    });
-
-    socket.on("disconnect", () => {
-        console.log("User disconnected:", socket.id);
-    });
+        res.json(aiResponse.data);
+    } catch (error) {
+        console.error('Error processing chat:', error);
+        res.status(500).json({
+            error: 'Error processing message',
+            details: error.response?.data || error.message
+        });
+    }
 });
 
-//Start the server
-server.listen(3000, () => {
-    console.log("Starting the server in port 3000");
+//Route to get chat hostory
+app.get('/api/chat-history/:conversationId', async (req, res) => {
+    const { conversationId } = req.params;
+
+    try {
+        const [rows] = await pool.execute(
+            'SELECT * FROM chats WHERE conversation_id = ? ORDER BY timestamp ASC',
+            [conversationId]
+        );
+        res.join(rows);
+    } catch (error) {
+        console.error('Error fetching chat hostory: ', error);
+        res.status(500).json({ error: 'Error fatching chat hostory'});
+    }
 });
 
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({ status: 'OK', timestamp: new Date() });
+});
 
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
