@@ -26,7 +26,7 @@ app.use(async (req, res, next) =>{
 });
 
 //Route to handle chat messages
-app.post('api/chat', async (req, res) => {
+app.post('/api/chat', async (req, res) => {
     const { userId, message, conversationId } = req.body; 
 
     if (!userId || !message || !conversationId) {

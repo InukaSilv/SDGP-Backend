@@ -54,7 +54,7 @@ class BoardingHouseChatbot:
                     #Create table to store chats
                     create_table_query = """
                     CREATE TABLE IF NOT EXISTS chats (
-                        id INT AUTO_INCREAMENT PRIMARY KEY,
+                        id INT AUTO_INCREMENT PRIMARY KEY,
                         user_id VARCHAR(255) NOT NULL,
                         user_message TEXT NOT NULL,
                         bot_response TEXT NOT NULL,
