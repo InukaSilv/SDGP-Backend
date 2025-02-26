@@ -80,4 +80,15 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
     }
 });
 
+// Retrieve a user's payment history from MongoDB
+router.get("/history", protect, async (req, res) => {
+    try {
+        const payments = await Payment.find({ userId: req.user.id }).sort({ createdAt: -1 }); // Fetch payments sorted by most recent
+        res.status(200).json(payments);
+    } catch (error) {
+        logger.error("Error retrieving payment history", error);
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
 module.exports = router;
