@@ -1,21 +1,19 @@
 const app = require("./app"); // Import the configured app
-const dotenv = require("dotenv");
+const { PORT } = require("./config/dotenv.config");
 
-dotenv.config(); // Load environment variables
-
-const PORT = process.env.PORT || 5001;
 console.log("Stripe API Key:", process.env.STRIPE_API_KEY);
+console.log("MONGO_URI:", process.env.MONGO_URI);
 
+// This is where the server starts
 const server = app.listen(PORT, () => {
-    console.log(`✅ Server running on http://localhost:${PORT}`);
+    console.log(`Server running on port ${PORT}`);
 });
 
-// Handle server errors
-server.on("error", (err) => {
-    if (err.code === "EADDRINUSE") {
-        console.error(`❌ Port ${PORT} is already in use. Please use a different port.`);
-        process.exit(1); // Exit the process to avoid hanging
-    } else {
-        console.error("❌ Server error:", err);
-    }
+// Handle process exit to free port
+process.on("SIGINT", () => {
+    console.log("Shutting down server...");
+    server.close(() => {
+        console.log("Server shut down. Exiting process...");
+        process.exit(0);
+    });
 });
