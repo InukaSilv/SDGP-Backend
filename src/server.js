@@ -1,3 +1,5 @@
+require("dotenv").config(); //Force load environment variables first
+
 const app = require("./app"); // Import the configured app
 const { PORT } = require("./config/dotenv.config");
 
