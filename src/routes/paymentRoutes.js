@@ -38,4 +38,46 @@ router.post("/create-payment-intent", protect, async (req, res) => {
     }
 });
 
+// Handle Stripe webhook events for payment success/failure
+router.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
+    const payload = req.body;
+    const sig = req.headers["stripe-signature"];
+
+    try {
+        const event = stripe.webhooks.constructEvent(payload, sig, process.env.STRIPE_WEBHOOK_SECRET);
+
+        switch (event.type) {
+            case "payment_intent.succeeded":
+                const paymentIntent = event.data.object;
+                logger.info(`PaymentIntent succeeded: ${paymentIntent.id}`);
+
+                // Update payment status in MongoDB
+                await Payment.findOneAndUpdate(
+                    { transactionId: paymentIntent.id },
+                    { status: "success" }
+                );
+                break;
+
+            case "payment_intent.payment_failed":
+                const failedIntent = event.data.object;
+                logger.warn(`PaymentIntent failed: ${failedIntent.id}`);
+
+                // Update failed payment in MongoDB
+                await Payment.findOneAndUpdate(
+                    { transactionId: failedIntent.id },
+                    { status: "failed" }
+                );
+                break;
+
+            default:
+                logger.info(`Unhandled event type: ${event.type}`);
+        }
+
+        res.status(200).send("Webhook received"); // Confirm webhook receipt
+    } catch (error) {
+        logger.error("Webhook error", error);
+        res.status(400).send("Webhook error");
+    }
+});
+
 module.exports = router;
