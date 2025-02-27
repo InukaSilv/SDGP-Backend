@@ -60,7 +60,7 @@ app.get('/api/chat-history/:conversationId', async (req, res) => {
             'SELECT * FROM chats WHERE conversation_id = ? ORDER BY timestamp ASC',
             [conversationId]
         );
-        res.join(rows);
+        res.json(rows);
     } catch (error) {
         console.error('Error fetching chat hostory: ', error);
         res.status(500).json({ error: 'Error fatching chat hostory'});
