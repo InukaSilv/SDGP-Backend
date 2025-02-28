@@ -1,17 +1,15 @@
-const mongoose = require('mongoose');
-const { MONGO_URI } = require('./dotenv.config');
-const { logInfo, logError } = require("../utils/logger"); 
+const mongoose = require("mongoose");
+const { logInfo, logError } = require("../utils/logger");
 
 const connectDB = async () => {
     try {
-        const conn = await mongoose.connect(process.env.MONGO_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
+        if (!process.env.MONGO_URI) throw new Error("MONGO_URI is not defined. Check your .env file.");
+        
+        const conn = await mongoose.connect(process.env.MONGO_URI);
         logInfo(`MongoDB Connected: ${conn.connection.host}`);
     } catch (error) {
-        logError(`Error: ${error.message}`);
-        process.exit(1); // Exit process with failure
+        logError(`MongoDB Connection Error: ${error.message}`);
+        process.exit(1);
     }
 };
 
