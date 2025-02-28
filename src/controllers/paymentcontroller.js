@@ -1,5 +1,13 @@
 const Payment = require("../models/Payment");
 
+
+const newPayment = new Payment({
+  userId,
+  featureType,
+  amount,
+  status: "pending", // Standardized status
+});
+
 const paymentData = {
   merchant_id: "YOUR_MERCHANT_ID",
   return_url: "http://localhost:5000/api/payments/success",
