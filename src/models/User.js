@@ -41,6 +41,10 @@ const UserSchema = new mongoose.Schema({
         requried:[true,'Registration type is required'],
         default:'password'
     },
+    properties:[{
+        type:mongoose.Schema.Types.ObjectId, 
+        ref:'Property'
+    }],
     isPremium: {
         type: Boolean,
         default: false
