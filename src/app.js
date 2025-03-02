@@ -19,8 +19,9 @@ app.use(express.json());
 // Routes 
 app.use("/api/auth", require("./routes/authRoutes"));
 // app.use("/api/users", require("./routes/userRoutes"));
-// app.use("/api/listings", require("./routes/listingRoutes"));
+app.use("/api/listings", require("./routes/PropertyRoutes"));
 // app.use("/api/payments", require("./routes/paymentRoutes"));
+app.use("/api/upload", require("./routes/upload"));
 
 // Error handling middleware (if you have one)
 // const { errorHandler } = require("./middlewares/errorHandler");
