@@ -45,7 +45,8 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
 
     try {
         const event = stripe.webhooks.constructEvent(payload, sig, process.env.STRIPE_WEBHOOK_SECRET);
-
+        logger.info(`Webhook received: ${event.type}`);
+        
         switch (event.type) {
             case "payment_intent.succeeded":
                 const paymentIntent = event.data.object;
