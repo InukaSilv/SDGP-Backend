@@ -46,11 +46,18 @@ router.post("/webhook", express.raw({ type: "application/json" }), async (req, r
     try {
         const event = stripe.webhooks.constructEvent(payload, sig, process.env.STRIPE_WEBHOOK_SECRET);
         logger.info(`Webhook received: ${event.type}`);
-        
+
         switch (event.type) {
             case "payment_intent.succeeded":
                 const paymentIntent = event.data.object;
                 logger.info(`PaymentIntent succeeded: ${paymentIntent.id}`);
+
+                const userId = paymentIntent.metadata?.userId; // Extract userId from metadata
+
+                if (!userId) {
+                    logger.error("User ID missing in metadata");
+                    return res.status(400).send("User ID missing");
+                }
 
                 // Update payment status in MongoDB
                 await Payment.findOneAndUpdate(
