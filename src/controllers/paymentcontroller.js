@@ -3,7 +3,12 @@ const axios = require("axios");
 
 exports.initiatePayment = async (req, res) => {
   try {
-    const { userId, featureType, amount } = req.body;
+    const userId = req.user.id;
+    const { featureType, amount } = req.body;
+
+    if (!featureType || !amount) {
+      return res.status(400).json({ error: "Feature type and amount are required" });
+    }
 
     const newPayment = new Payment({
       userId,
@@ -15,22 +20,27 @@ exports.initiatePayment = async (req, res) => {
     await newPayment.save();
 
     const paymentData = {
-      merchant_id: "YOUR_MERCHANT_ID",
+      merchant_id: process.env.MERCHANT_ID,  // Use environment variables
       return_url: "http://localhost:5000/api/payments/success",
       cancel_url: "http://localhost:5000/api/payments/cancel",
       notify_url: "http://localhost:5000/api/payments/webhook",
       order_id: newPayment._id.toString(),
       items: `Premium ${featureType} Subscription`,
       currency: "LKR",
-      amount: amount,
-      first_name: req.user.name,
-      email: req.user.email,
-      phone: req.user.phone,
+      amount: amount.toFixed(2),
+      first_name: req.user.name || "N/A",
+      email: req.user.email || "N/A",
+      phone: req.user.phone || "N/A",
     };
 
-    res.json({ success: true, paymentData });
+    // Send payment request to the gateway (if required)
+    // Replace the URL with your actual payment provider's API endpoint
+    const response = await axios.post("https://sandbox.payhere.lk/pay/checkout", paymentData);
+    
+    res.json({ success: true, paymentUrl: response.data.payment_url });
+
   } catch (error) {
-    console.error(error);
+    console.error("Payment initiation error:", error);
     res.status(500).json({ error: "Payment initiation failed" });
   }
 };
@@ -47,6 +57,7 @@ exports.paymentSuccess = async (req, res) => {
 
     res.json({ success: true, message: "Payment updated successfully" });
   } catch (error) {
+    console.error("Payment update error:", error);
     res.status(500).json({ error: "Payment update failed" });
   }
 };
