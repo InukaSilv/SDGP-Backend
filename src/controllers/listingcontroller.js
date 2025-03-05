@@ -159,9 +159,71 @@ const addReview = async (req, res, next) => {
   }
 };
 
+// @desc    Delete a listing
+// @route   DELETE /api/listings/:id
+// @access  Private (landlords only)
+const deleteListing = async (req, res, next) => {
+    try {
+      const listing = await Listing.findById(req.params.id);
+  
+      if (!listing) {
+        return res.status(404).json({ message: "Listing not found" });
+      }
+  
+      // Check if the logged-in user is the landlord
+      if (listing.landlord.toString() !== req.user._id.toString()) {
+        return res.status(401).json({ message: "Not authorized" });
+      }
+  
+      // Remove the listing ID from the landlord's ads array
+      await User.findByIdAndUpdate(req.user._id, {
+        $pull: { ads: listing._id },
+      });
+  
+      // Delete the listing
+      await listing.remove();
+  
+      res.json({ message: "Listing deleted successfully" });
+    } catch (err) {
+      next(err);
+    }
+};
+
+// @desc    Update listing images
+// @route   PUT /api/listings/:id/images
+// @access  Private (landlords only)
+const updateListingImages = async (req, res, next) => {
+    try {
+      const listing = await Listing.findById(req.params.id);
+  
+      if (!listing) {
+        return res.status(404).json({ message: "Listing not found" });
+      }
+  
+      // Check if the logged-in user is the landlord
+      if (listing.landlord.toString() !== req.user._id.toString()) {
+        return res.status(401).json({ message: "Not authorized" });
+      }
+  
+      // Upload new images to Azure Blob Storage (handled in the route)
+      const newImageUrls = req.imageUrls; // Assume image URLs are added to req object by the route
+  
+      // Add new images to the listing
+      listing.images = [...listing.images, ...newImageUrls];
+      await listing.save();
+  
+      res.json({ message: "Listing images updated successfully", listing });
+    } catch (err) {
+      next(err);
+    }
+};
+
 module.exports = {
   getAllListings,
   createListing,
   updateListing,
+  searchListings,
+  deleteListing,
+  updateListingImages,
   addReview,
 };
