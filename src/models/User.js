@@ -35,6 +35,12 @@ const UserSchema = new mongoose.Schema({
         required: [true, 'Role is required'],
         default: 'Student'
     },
+    ads: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Listing",
+        },
+      ],
     registerType: {
         type: String,
         enum:['password','google'],

@@ -1,26 +1,95 @@
 const mongoose = require("mongoose");
 
-const ListingSchema = new mongoose.Schema({
-    title: {
-        type: String,
-        required: true,
+const reviewSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  rating: {
+    type: Number,
+    required: true,
+    min: 1,
+    max: 5,
+  },
+  comment: {
+    type: String,
+    required: true,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
+
+const listingSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true,
+  },
+  description: {
+    type: String,
+    required: true,
+  },
+  location: {
+    type: {
+      type: String,
+      default: "Point",
     },
-    description: {
-        type: String,
-        required: true,
+    coordinates: {
+      type: [Number], // [longitude, latitude]
+      required: true,
     },
-    images: {
-        type: [String],
-    },
-    price: {
-        type: Number,
-        required: true,
-    },
-    landlord: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
-    },
+  },
+  images: {
+    type: [String], // Array of image URLs
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+  landlord: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "User",
+    required: true,
+  },
+  amenities: {
+    type: [String], // Array of amenities 
+    default: [],
+  },
+  maxResidents: {
+    type: Number,
+    required: true,
+    min: 1,
+  },
+  currentResidents: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  averageRating: {
+    type: Number,
+    default: 0,
+    min: 0,
+    max: 5,
+  },
+  reviews: [reviewSchema], // Array of review objects
 }, { timestamps: true });
 
-module.exports = mongoose.model("Listing", ListingSchema);
+// Calculate average rating before saving
+listingSchema.pre("save", function (next) {
+  if (this.reviews.length > 0) {
+    const totalRating = this.reviews.reduce(
+      (sum, review) => sum + review.rating,
+      0
+    );
+    this.averageRating = (totalRating / this.reviews.length).toFixed(1);
+  } else {
+    this.averageRating = 0;
+  }
+  next();
+});
+
+listingSchema.index({ location: "2dsphere" });
+
+module.exports = mongoose.model("Listing", listingSchema);

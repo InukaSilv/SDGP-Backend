@@ -4,44 +4,66 @@ const Listing = require("../models/Listing");
 // @route   GET /api/listings
 // @access  Public
 const getAllListings = async (req, res, next) => {
-  try {
-    const listings = await Listing.find().populate("landlord", "firstName lastName email");
-    res.json(listings);
-  } catch (err) {
-    next(err);
-  }
+    try {
+      let listings;
+      if (req.user && req.user.role === "landlord") {
+        // If the user is a landlord, return only their listings
+        listings = await Listing.find({ landlord: req.user._id }).populate(
+          "landlord",
+          "firstName lastName email"
+        );
+      } else {
+        // If the user is a student or not logged in, return all listings
+        listings = await Listing.find().populate("landlord", "firstName lastName email");
+      }
+      res.json(listings);
+    } catch (err) {
+      next(err);
+    }
+ 
 };
 
 // @desc    Create a new listing
 // @route   POST /api/listings
 // @access  Private (landlords only)
 const createListing = async (req, res, next) => {
-  const { title, description, amenities, maxResidents } = req.body;
-
-  if (!title || !description || !maxResidents || !req.files) {
-    return res.status(400).json({ message: "Please fill all required fields and upload images" });
-  }
-
-  try {
-    // Upload images to Azure Blob Storage (handled in the route)
-    const imageUrls = req.imageUrls; // Assume image URLs are added to req object by the route
-
-    // Create new listing
-    const newListing = new Listing({
-      landlord: req.user._id,
-      title,
-      description,
-      images: imageUrls,
-      amenities: amenities || [],
-      maxResidents,
-    });
-
-    const savedListing = await newListing.save();
-    res.status(201).json(savedListing);
-  } catch (err) {
-    next(err);
-  }
+    const { title, description, amenities, maxResidents, location } = req.body;
+  
+    if (!title || !description || !maxResidents || !req.files || !location) {
+      return res.status(400).json({ message: "Please fill all required fields and upload images" });
+    }
+  
+    try {
+      // Upload images to Azure Blob Storage (handled in the route)
+      const imageUrls = req.imageUrls; // Assume image URLs are added to req object by the route
+  
+      // Create new listing
+      const newListing = new Listing({
+        landlord: req.user._id,
+        title,
+        description,
+        images: imageUrls,
+        amenities: amenities || [],
+        maxResidents,
+        location: {
+          type: "Point",
+          coordinates: [location.longitude, location.latitude], // [longitude, latitude]
+        },
+      });
+  
+      const savedListing = await newListing.save();
+  
+      // Add the listing ID to the landlord's ads array
+      await User.findByIdAndUpdate(req.user._id, {
+        $push: { ads: savedListing._id },
+      });
+  
+      res.status(201).json(savedListing);
+    } catch (err) {
+      next(err);
+    }
 };
+  
 
 // @desc    Update a listing
 // @route   PUT /api/listings/:id
@@ -70,6 +92,35 @@ const updateListing = async (req, res, next) => {
 
     const updatedListing = await listing.save();
     res.json(updatedListing);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// @desc    Search listings by location
+// @route   GET /api/listings/search
+// @access  Public
+const searchListings = async (req, res, next) => {
+  const { latitude, longitude } = req.query;
+
+  if (!latitude || !longitude) {
+    return res.status(400).json({ message: "Please provide latitude and longitude" });
+  }
+
+  try {
+    const listings = await Listing.find({
+      location: {
+        $near: {
+          $geometry: {
+            type: "Point",
+            coordinates: [parseFloat(longitude), parseFloat(latitude)],
+          },
+          $maxDistance: 5000, // 5km radius
+        },
+      },
+    }).populate("landlord", "firstName lastName email");
+
+    res.json(listings);
   } catch (err) {
     next(err);
   }
