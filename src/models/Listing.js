@@ -53,8 +53,25 @@ const listingSchema = new mongoose.Schema({
     ref: "User",
     required: true,
   },
-  amenities: {
-    type: [String], // Array of amenities 
+  housingType: {
+    type: String,
+    enum: ["hostel", "house", "apartment"],
+    required: true,
+  },
+  roomTypes: {
+    single: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    shared: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+  },
+  facilities: {
+    type: [String], // Array of amenities
     default: [],
   },
   maxResidents: {
@@ -66,6 +83,10 @@ const listingSchema = new mongoose.Schema({
     type: Number,
     default: 0,
     min: 0,
+  },
+  contactNumber: {
+    type: String,
+    required: true,
   },
   averageRating: {
     type: Number,
