@@ -1,63 +1,94 @@
+const asyncHandler = require("express-async-handler");
+const stripe = require("stripe")(process.env.STRIPE_API_KEY);
 const Payment = require("../models/Payment");
-const axios = require("axios");
+const User = require("../models/User");
+const { PRICES } = require("../config/constants");
+const logger = require("../utils/logger");
 
-exports.initiatePayment = async (req, res) => {
-  try {
+//  Initiates a Stripe payment (called when user starts payment)
+const initiatePayment = asyncHandler(async (req, res) => {
+    const { featureType, currency = "LKR" } = req.body;
     const userId = req.user.id;
-    const { featureType, amount } = req.body;
 
-    if (!featureType || !amount) {
-      return res.status(400).json({ error: "Feature type and amount are required" });
+    // Check if user exists and is verified
+    const user = await User.findById(userId);
+    if (!user) {
+        return res.status(404).json({ error: "User not found" });
     }
 
-    const newPayment = new Payment({
-      userId,
-      featureType,
-      amount,
-      status: "pending",
-    });
+    if (!user.isEmailVerified) {
+        return res.status(403).json({ error: "Email not verified. Please verify your email before making a payment." });
+    }
 
-    await newPayment.save();
+    const amount = PRICES[featureType]; // Use fixed price
 
-    const paymentData = {
-      merchant_id: process.env.MERCHANT_ID,  // Use environment variables
-      return_url: "http://localhost:5000/api/payments/success",
-      cancel_url: "http://localhost:5000/api/payments/cancel",
-      notify_url: "http://localhost:5000/api/payments/webhook",
-      order_id: newPayment._id.toString(),
-      items: `Premium ${featureType} Subscription`,
-      currency: "LKR",
-      amount: amount.toFixed(2),
-      first_name: req.user.name || "N/A",
-      email: req.user.email || "N/A",
-      phone: req.user.phone || "N/A",
-    };
+    try {
+        // Create Stripe payment intent
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount: amount * 100, // Convert to cents
+            currency,
+            metadata: { userId, featureType, userRole: user.role},
+        });
 
-    // Send payment request to the gateway (if required)
-    // Replace the URL with your actual payment provider's API endpoint
-    const response = await axios.post("https://sandbox.payhere.lk/pay/checkout", paymentData);
-    
-    res.json({ success: true, paymentUrl: response.data.payment_url });
+        // Store payment details in MongoDB
+        const newPayment = new Payment({
+            userId,
+            userRole: user.role,
+            featureType,
+            amount,
+            currency,
+            status: "pending",
+            transactionId: paymentIntent.id,
+        });
 
-  } catch (error) {
-    console.error("Payment initiation error:", error);
-    res.status(500).json({ error: "Payment initiation failed" });
-  }
-};
+        await newPayment.save();
+        logger.info(`Payment initiated: ${user.email} - ${featureType} - ${user.role} - LKR ${amount}`);
 
-exports.paymentSuccess = async (req, res) => {
-  const { order_id, status } = req.body;
+        res.json({ success: true, clientSecret: paymentIntent.client_secret });
+    } catch (error) {
+        logger.error(`Payment initiation failed: ${error.message}`);
+        res.status(500).json({ error: "Payment initiation failed", message: error.message });
+    }
+});
 
-  try {
-    const payment = await Payment.findById(order_id);
-    if (!payment) return res.status(404).json({ error: "Payment not found" });
+// Handles Stripe webhook (for payment success/failure)
+const handleWebhook = asyncHandler(async (req, res) => {
+    const sig = req.headers["stripe-signature"];
+    let event;
 
-    payment.status = status === "success" ? "success" : "failed";
-    await payment.save();
+    try {
+        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+    } catch (error) {
+        return res.status(400).json({ error: "Webhook verification failed", message: error.message });
+    }
 
-    res.json({ success: true, message: "Payment updated successfully" });
-  } catch (error) {
-    console.error("Payment update error:", error);
-    res.status(500).json({ error: "Payment update failed" });
-  }
-};
+    if (event.type === "payment_intent.succeeded") {
+        const paymentIntent = event.data.object;
+        await Payment.findOneAndUpdate(
+            { transactionId: paymentIntent.id },
+            { status: "success" }
+        );
+        logger.info(`Payment successful: ${paymentIntent.id}`);
+    } else if (event.type === "payment_intent.payment_failed") {
+        const paymentIntent = event.data.object;
+        await Payment.findOneAndUpdate(
+            { transactionId: paymentIntent.id },
+            { status: "failed" }
+        );
+        logger.warn(`Payment failed: ${paymentIntent.id}`);
+    }
+
+    res.status(200).json({ received: true });
+});
+
+//Gets a user's payment history
+const getPaymentHistory = asyncHandler(async (req, res) => {
+    try {
+        const payments = await Payment.find({ userId: req.user.id }).sort({ createdAt: -1 });
+        res.status(200).json(payments);
+    } catch (error) {
+        res.status(500).json({ error: "Failed to fetch payment history" });
+    }
+});
+
+module.exports = { initiatePayment, handleWebhook, getPaymentHistory };
