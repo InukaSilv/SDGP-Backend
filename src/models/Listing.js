@@ -59,12 +59,12 @@ const listingSchema = new mongoose.Schema({
     required: true,
   },
   roomTypes: {
-    single: {
+    singleRoom: {
       type: Number,
       default: 0,
       min: 0,
     },
-    shared: {
+    doubleRoom: {
       type: Number,
       default: 0,
       min: 0,
@@ -74,7 +74,7 @@ const listingSchema = new mongoose.Schema({
     type: [String], // Array of amenities
     default: [],
   },
-  maxResidents: {
+  residents: {
     type: Number,
     required: true,
     min: 1,
@@ -84,7 +84,7 @@ const listingSchema = new mongoose.Schema({
     default: 0,
     min: 0,
   },
-  contactNumber: {
+  contact: {
     type: String,
     required: true,
   },

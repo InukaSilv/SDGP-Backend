@@ -5,7 +5,7 @@ const logger = require('../utils/logger');
 // Middleware to protect routes
 const protect = async (req, res, next) => {
     let token;
-
+console.log("Came to authenticcation");
     if (
         req.headers.authorization &&
         req.headers.authorization.startsWith('Bearer')

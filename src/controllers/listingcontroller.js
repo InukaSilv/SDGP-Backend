@@ -31,11 +31,12 @@ const createListing = async (req, res, next) => {
     title,
     description,
     housingType,
-    roomTypes,
+    roomType,
     facilities,
-    maxResidents,
-    contactNumber,
-    location,
+    residents,
+    contact,
+    lat,
+    lng,
   } = req.body;
 
   // Validate required fields
@@ -43,12 +44,12 @@ const createListing = async (req, res, next) => {
     !title ||
     !description ||
     !housingType ||
-    !roomTypes ||
+    !roomType ||
     !facilities ||
-    !maxResidents ||
-    !contactNumber ||
-    !location?.coordinates ||
-    !req.files
+    !residents ||
+    !contact ||
+    !lat || !lng ||
+    !req.imageUrls
   ) {
     return res.status(400).json({ message: "Please fill all required fields and upload images" });
   }
@@ -63,13 +64,13 @@ const createListing = async (req, res, next) => {
       title,
       description,
       housingType,
-      roomTypes,
-      facilities,
-      maxResidents,
-      contactNumber,
+      roomTypes:JSON.parse(roomType),
+      facilities: JSON.parse(facilities),
+      maxResidents:residents,
+      contactNumber:contact,
       location: {
         type: "Point",
-        coordinates: [location.coordinates.longitude, location.coordinates.latitude], // [longitude, latitude]
+        coordinates: [parseFloat(lng),parseFloat(lat)], // [longitude, latitude]
       },
       images: imageUrls,
     });
