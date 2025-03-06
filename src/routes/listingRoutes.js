@@ -22,7 +22,7 @@ router.get("/", getAllListings);
 // @desc    Create a new listing
 // @route   POST /api/listings
 // @access  Private (landlords only)
-router.post("/api/listing", protect, upload.array("images", 7), async (req, res, next) => {
+router.post("/", protect, upload.array("images", 7), async (req, res, next) => {
   try {
     console.log("Images received");
     // Upload images to Azure Blob Storage
