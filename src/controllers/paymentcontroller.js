@@ -19,6 +19,11 @@ const initiatePayment = asyncHandler(async (req, res) => {
     if (!user.isEmailVerified) {
         return res.status(403).json({ error: "Email not verified. Please verify your email before making a payment." });
     }
+    // 🔹 Prevent duplicate payments (if user already has an active premium subscription)
+    const existingPayment = await Payment.findOne({ userId, featureType, status: "success" });
+    if (existingPayment) {
+        return res.status(400).json({ error: "You already have an active subscription." });
+    }
 
     const amount = PRICES[featureType]; // Use fixed price
 
@@ -43,8 +48,8 @@ const initiatePayment = asyncHandler(async (req, res) => {
 
         await newPayment.save();
         logger.info(`Payment initiated: ${user.email} - ${featureType} - ${user.role} - LKR ${amount}`);
-
         res.json({ success: true, clientSecret: paymentIntent.client_secret });
+
     } catch (error) {
         logger.error(`Payment initiation failed: ${error.message}`);
         res.status(500).json({ error: "Payment initiation failed", message: error.message });
@@ -62,14 +67,25 @@ const handleWebhook = asyncHandler(async (req, res) => {
         return res.status(400).json({ error: "Webhook verification failed", message: error.message });
     }
 
+//Handle successful payment    
     if (event.type === "payment_intent.succeeded") {
         const paymentIntent = event.data.object;
-        await Payment.findOneAndUpdate(
+        //Update payment status in MongoDB
+        const payment = await Payment.findOneAndUpdate(
             { transactionId: paymentIntent.id },
-            { status: "success" }
+            { status: "success" },
+            { new: true }
         );
-        logger.info(`Payment successful: ${paymentIntent.id}`);
-    } else if (event.type === "payment_intent.payment_failed") {
+
+        if (payment) {
+            // Upgrade user to Premium after successful payment
+            await User.findByIdAndUpdate(payment.userId, { isPremium: true });
+
+        logger.info(`Payment successful: ${paymentIntent.id}| User upgraded to Premium`);
+        }   
+    }     
+//Handle failed payment        
+    else if (event.type === "payment_intent.payment_failed") {
         const paymentIntent = event.data.object;
         await Payment.findOneAndUpdate(
             { transactionId: paymentIntent.id },
