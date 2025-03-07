@@ -5,7 +5,9 @@ const { protect } = require("../middlewares/authMiddleware");
 
 // Route to create a Stripe payment intent
 router.post("/create-payment-intent", protect, (req, res, next) => {
-    console.log("✅ Payment initiation route hit!");
+    if (process.env.NODE_ENV !== "production") {
+        console.log("✅ Payment initiation route hit!");
+    }    
     next();
 }, initiatePayment);
 

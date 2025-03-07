@@ -4,7 +4,6 @@ const express = require("express");
 const app = require("./app"); // Import the configured app
 const { PORT } = require("./config/dotenv.config");
 
-console.log("Stripe API Key:", process.env.STRIPE_API_KEY);
 console.log("MONGO_URI:", process.env.MONGO_URI);
 
 // This is where the server starts
