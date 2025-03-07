@@ -31,10 +31,10 @@ const initiatePayment = asyncHandler(async (req, res) => {
     }
 
     // Check for active subscription & extend if applicable
-    let expiryDate = new Date();
     const activePayment = await Payment.findOne({ userId, featureType, status: "success" });
+    let expiryDate = new Date();
     if (activePayment && new Date(activePayment.subscriptionExpiry) > new Date()) {
-        expiryDate = new Date(activePayment.subscriptionExpiry);
+        expiryDate = new Date(activePayment.subscriptionExpiry); // Extend from current expiry
     }
     expiryDate.setDate(expiryDate.getDate() + 30)
 
@@ -58,7 +58,7 @@ const initiatePayment = asyncHandler(async (req, res) => {
             status: "pending",
             transactionId: paymentIntent.id,
             boughtDate: new Date(),
-            subscriptionExpiry: null, 
+            subscriptionExpiry: expiryDate, 
         });
 
         await newPayment.save();
@@ -67,7 +67,7 @@ const initiatePayment = asyncHandler(async (req, res) => {
 
     } catch (error) {
         logger.error(`Payment initiation failed: ${error.message}`);
-        res.status(500).json({ error: "Payment initiation failed", message: error.message });
+        res.status(500).json({ error: "Payment initiation failed"});
     }
 });
 
@@ -90,23 +90,40 @@ const handleWebhook = asyncHandler(async (req, res) => {
     if (event.type === "payment_intent.succeeded") {
         payment.status = "success";
 
-        // Update user's subscription status
-        await User.findByIdAndUpdate(payment.userId, { 
-            isPremium: true, 
-        });
+    // Extend or replace subscription expiry based on user plan
+        const user = await User.findById(payment.userId);
+        let expiryDate = new Date();
 
-        logger.info(`Payment successful: ${paymentIntent.id}| User upgraded to Premium`);
+        const activePayment = await Payment.findOne({ userId: payment.userId, status: "success" });
+
+        if (activePayment && new Date(activePayment.subscriptionExpiry) > new Date()) {
+            expiryDate = new Date(activePayment.subscriptionExpiry); // Extend from current expiry
+        }
+
+        expiryDate.setDate(expiryDate.getDate() + 30);
+        payment.subscriptionExpiry = expiryDate; // Update the expiry in Payment collection
+
+        // If upgrading, remove the previous subscription
+        if (user.isPremium && user.role === "student" && payment.featureType === "advanced") {
+            await Payment.updateMany({ userId: payment.userId, status: "success" }, { status: "inactive" });
+            logger.info(`Upgraded to Advanced: ${payment.userId}`);
+        }
+
+        await User.findByIdAndUpdate(payment.userId, { isPremium: true });
+
+        logger.info(`Payment successful: ${paymentIntent.id} | User upgraded to Premium | Expiry: ${expiryDate}`);
+
         
         // Send email confirmation
-        const user = await User.findById(payment.userId);
         if (user) {
             sendEmail(user.email, "Subscription Activated", `
                 <p>Dear ${user.firstName},</p>
                 <p>Your <strong>${payment.featureType}</strong> subscription is now active.</p>
-                <p>Subscription Expiry Date: ${expiryDate.toDateString()}</p>
+                <p>Subscription Expiry Date: ${new Date(payment.subscriptionExpiry).toDateString()}</p>
                 <p>Thank you for your support!</p>
                 <p>Best Regards, <br/> RiVVE Team</p>
             `);
+            logger.info(`Email sent to ${user.email} | Payment ID: ${paymentIntent.id}`);
         } 
     }     
 //Handle failed payment        
@@ -122,13 +139,16 @@ const handleWebhook = asyncHandler(async (req, res) => {
 
 // Auto-downgrade expired subscriptions
 cron.schedule("0 0 * * *", async () => {
-    logger.info("Running daily subscription expiry check...");
-    const expiredPayments = await Payment.find({ status: "success", subscriptionExpiry: { $lt: new Date() } });
+    const now = new Date();
+    const expiredUsers = await Payment.find({ subscriptionExpiry: { $lt: now }, status: "success" });
 
-    for (const payment of expiredPayments) {
+    for (let payment of expiredUsers) {
         await User.findByIdAndUpdate(payment.userId, { isPremium: false });
-        logger.info(`User ${payment.userId} downgraded due to expired subscription.`);
+        await Payment.updateOne({ _id: payment._id }, { status: "expired" });
+        logger.info(`Subscription expired: User ${payment.userId} downgraded.`);
     }
+
+    logger.info("Auto-downgrade task completed.");
 });
 
 
