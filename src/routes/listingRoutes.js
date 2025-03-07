@@ -24,7 +24,6 @@ router.get("/", getAllListings);
 // @access  Private (landlords only)
 router.post("/", protect, upload.array("images", 7), async (req, res, next) => {
   try {
-    console.log("Images received");
     // Upload images to Azure Blob Storage
     const imageUrls = [];
     for (const file of req.files) {
@@ -36,7 +35,7 @@ router.post("/", protect, upload.array("images", 7), async (req, res, next) => {
     req.imageUrls = imageUrls;
 
     // Pass control to the createListing controller
-    await createListing(req, res, next);
+    createListing(req, res, next);
   } catch (err) {
     next(err);
   }

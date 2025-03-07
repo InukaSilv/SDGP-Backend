@@ -5,7 +5,6 @@ const logger = require('../utils/logger');
 // Middleware to protect routes
 const protect = async (req, res, next) => {
     let token;
-console.log("Came to authenticcation");
     if (
         req.headers.authorization &&
         req.headers.authorization.startsWith('Bearer')
@@ -13,12 +12,13 @@ console.log("Came to authenticcation");
         try {
             // Get token from header
             token = req.headers.authorization.split(' ')[1];
+            console.log("token received in middle")
 
             // Verify token
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
             // Get user from token
-            req.user = await User.findById(decoded.id).select('-password');
+            req.user = await User.findById(decoded.userId).select('-password');
 
             if (!req.user) {
                 return res.status(401).json({ message: 'Unauthorized: User not found' });

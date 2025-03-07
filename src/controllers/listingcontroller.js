@@ -27,6 +27,7 @@ const getAllListings = async (req, res, next) => {
 // @route   POST /api/listings
 // @access  Private (landlords only)
 const createListing = async (req, res, next) => {
+  console.log("came to create");
   const {
     title,
     description,
@@ -37,8 +38,12 @@ const createListing = async (req, res, next) => {
     contact,
     lat,
     lng,
+    price,
+    singleRoom,
+    doubleRoom,
+    address
   } = req.body;
-
+  console.log("Request body",req.body);
   // Validate required fields
   if (
     !title ||
@@ -48,8 +53,8 @@ const createListing = async (req, res, next) => {
     !facilities ||
     !residents ||
     !contact ||
-    !lat || !lng ||
-    !req.imageUrls
+    !lat || !lng || 
+    !price || !address
   ) {
     return res.status(400).json({ message: "Please fill all required fields and upload images" });
   }
@@ -64,20 +69,25 @@ const createListing = async (req, res, next) => {
       title,
       description,
       housingType,
-      roomTypes:JSON.parse(roomType),
+      roomTypes: {
+        singleRoom: parseInt(singleRoom, 10),
+        doubleRoom: parseInt(doubleRoom, 10),
+      },
       facilities: JSON.parse(facilities),
-      maxResidents:residents,
-      contactNumber:contact,
+      residents,
+      contact,
+      price: parseFloat(price),
+      address,
       location: {
         type: "Point",
-        coordinates: [parseFloat(lng),parseFloat(lat)], // [longitude, latitude]
+        coordinates: [parseFloat(lng), parseFloat(lat)], 
       },
-      images: imageUrls,
+      images: req.imageUrls, 
     });
 
     const savedListing = await newListing.save();
 
-    // Add the listing ID to the landlord's ads array
+    
     await User.findByIdAndUpdate(req.user._id, {
       $push: { ads: savedListing._id },
     });
@@ -85,6 +95,8 @@ const createListing = async (req, res, next) => {
     res.status(201).json(savedListing);
   } catch (err) {
     next(err);
+    console.log(err);
+    console.log("Request body error",req.body);
   }
 };
 
@@ -137,6 +149,8 @@ const updateListing = async (req, res, next) => {
     res.json(updatedListing);
   } catch (err) {
     next(err);
+    console.log(err);
+    
   }
 };
 

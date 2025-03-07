@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const authRoutes = require('./routes/authRoutes');
+const LstRoutes = require('./routes/LstRoutes')
 const admin = require('./config/firebaseAdmin'); // Ensure Firebase is initialized
 const cors = require('cors');
 
@@ -20,6 +21,7 @@ mongoose.connect(process.env.MONGO_URI, {
 
 // Authentication Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/listing',LstRoutes )
 
 // Global error handler
 app.use((err, req, res, next) => {

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { type } = require("os");
 
 const reviewSchema = new mongoose.Schema({
   user: {
@@ -31,6 +32,10 @@ const listingSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  address:{
+    type:String,
+    required:true,
+  },
   location: {
     type: {
       type: String,
@@ -55,7 +60,7 @@ const listingSchema = new mongoose.Schema({
   },
   housingType: {
     type: String,
-    enum: ["hostel", "house", "apartment"],
+    enum: ["Hostel", "House", "Apartment"],
     required: true,
   },
   roomTypes: {
