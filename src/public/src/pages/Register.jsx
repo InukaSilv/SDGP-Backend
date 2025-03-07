@@ -1,58 +1,118 @@
-import React from "react";
-import { Link } from "react-router-dom";
+import React, { useState } from "react";
+import { Link, useNavigate} from "react-router-dom";
 import styled from "styled-components";
-import Logo from "../assests/logo.png"
+import Logo from "../assests/logo.png";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import axios from "axios";
+import { registerRoute } from "../utils/APIRoutes";
 
 function Register() {
-    const handleSubmit = (event) => {
+
+    const navigate = useNavigate()
+
+    const [values, setValues] = useState({
+        username: "",
+        email: "",
+        password: "",
+        confirmPassword: "",
+    });
+
+    const toastOptions = {
+        position: "bottom-right",
+        autoClose: 7000,
+        pauseOnHover: true,
+        draggable: true,
+        theme: "dark",
+    };
+
+    const handleSubmit = async (event) => {
         event.preventDefault();
-        alert("form");
+        if (handleValidation()) {
+            const { username, email, password } = values;
+            
+            const { data } = await axios.post(registerRoute, {
+                username,
+                email,
+                password,
+            });
+            
+            if (data.status === false) {
+                toast.error(data.msg, toastOptions);
+                
+            } 
+            if (data.status === true) {
+                //console.log("Saving user data:", data.user);
+                localStorage.setItem('chat-app-user', JSON.stringify(data.user));
+                //console.log("Checking saved data:", localStorage.getItem('chat-app-user'));
+                navigate("/");
+            } 
+        }
+    };
+
+    const handleValidation = () => {
+        const { password, confirmPassword, username, email } = values;
+        if (password !== confirmPassword) {
+            toast.error("Password and confirm password should be the same.", toastOptions);
+            return false;
+        } else if (username.length < 3) {
+            toast.error("Username should be at least 3 characters long.", toastOptions);
+            return false;
+        } else if (password.length < 8) {
+            toast.error("Password should be at least 8 characters long.", toastOptions);
+            return false;
+        } else if (email === "") {
+            toast.error("Email is required.", toastOptions);
+            return false;
+        }
+        return true;
     };
 
     const handleChange = (event) => {
-        
-    }
+        setValues({ ...values, [event.target.name]: event.target.value });
+    };
 
     return (
-    <>
-        <FormContainer>
-            <form onSubmit={(event)=>handleSubmit}>
-                <div className="brand">
-                    <img src="" alt="Logo"/>
-                    <h1>RiVVe</h1>
-                </div>
-                <input
-                    type="text"
-                    placeholder="Username"
-                    name="username"
-                    onChange={(e) => handleChange(e)}
-                />
-                <input
-                    type="email"
-                    placeholder="Email"
-                    name="email"
-                    onChange={(e) => handleChange(e)}
-                />
-                <input
-                    type="password"
-                    placeholder="Password"
-                    name="password"
-                    onChange={(e) => handleChange(e)}
-                />
-                <input
-                    type="password"
-                    placeholder="Confirm password"
-                    name="confirmPassword"
-                    onChange={(e) => handleChange(e)}
-                />
-                <button type="submit">Create User</button>
-                <span>
-                    Already have an account ? <Link to="/login">Login</Link>
-                </span>
-            </form>
-        </FormContainer>
-    </>
-    )
+        <>
+            <FormContainer>
+                <form onSubmit={handleSubmit}>
+                    <div className="brand">
+                        <img src={Logo} alt="Logo" />
+                        <h1>RiVVe</h1>
+                    </div>
+                    <input
+                        type="text"
+                        placeholder="Username"
+                        name="username"
+                        onChange={handleChange}
+                    />
+                    <input
+                        type="email"
+                        placeholder="Email"
+                        name="email"
+                        onChange={handleChange}
+                    />
+                    <input
+                        type="password"
+                        placeholder="Password"
+                        name="password"
+                        onChange={handleChange}
+                    />
+                    <input
+                        type="password"
+                        placeholder="Confirm password"
+                        name="confirmPassword"
+                        onChange={handleChange}
+                    />
+                    <button type="submit">Create User</button>
+                    <span>
+                        Already have an account ? <Link to="/login">Login</Link>
+                    </span>
+                </form>
+            </FormContainer>
+            <ToastContainer />
+        </>
+    );
 }
 
 const FormContainer = styled.div`
@@ -64,13 +124,13 @@ const FormContainer = styled.div`
     gap: 1rem;
     align-items: center;
     background-color: #131324;
-    .band {
+    .brand {
         display: flex;
-        align-item: center;
+        align-items: center;
         gap: 1rem;
         justify-content: center;
         img {
-            heigth: 20px;
+            height: 5rem;
         }
     }
     
@@ -87,7 +147,7 @@ const FormContainer = styled.div`
         border-radius: 2rem;
         padding: 3rem 5rem;
     
-        input{
+        input {
             background-color: transparent;
             padding: 1rem;
             border: 0.1rem solid #4e0eff;
@@ -96,7 +156,7 @@ const FormContainer = styled.div`
             width: 100%;
             font-size: 1rem;
             &:focus {
-                border: #00000076.1rem solid #997af0;
+                border: 0.1rem solid #997af0;
                 outline: none;
             }
         }
@@ -108,15 +168,15 @@ const FormContainer = styled.div`
             font-weight: bold;
             cursor: pointer;
             border-radius: 0.4rem;
-            font-size: uppercase;
+            text-transform: uppercase;
             transition: 0.5s ease-in-out;
-            &:hover{
+            &:hover {
                 background-color: #4e0eff; 
             }
         }
         span {
             color: white;
-            text-transform; uppercase;
+            text-transform: uppercase;
             a {
                 color: #4e0eff;
                 text-decoration: none;
