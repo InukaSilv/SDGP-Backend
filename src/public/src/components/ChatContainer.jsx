@@ -2,6 +2,11 @@ import React, { useState, useRef, useEffect } from "react";
 import styled from "styled-components";
 import { BsEmojiSmileFill } from "react-icons/bs";
 import Picker from "emoji-picker-react";
+import axios from "axios";
+import { sendMessageRoute, getAllMessagesRoute } from "../utils/APIRoutes";
+
+
+
 
 export default function ChatContainer({ currentChat, currentUser }) {
   const [messages, setMessages] = useState([]);
@@ -11,26 +16,59 @@ export default function ChatContainer({ currentChat, currentUser }) {
   const inputRef = useRef();
 
   useEffect(() => {
-    // Reset messages when chat changes
+    
     setMessages([]);
-    // In a real app, you would fetch messages here
+    
   }, [currentChat]);
 
-  const handleSendMessage = (e) => {
-    e.preventDefault();
-    if (inputMessage.trim().length === 0) return;
-    
-    // Add message to local state
-    const newMessage = {
-      fromSelf: true,
-      message: inputMessage,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (currentChat && currentUser) {
+        try {
+          const response = await axios.post(getAllMessagesRoute, {
+            from: currentUser._id,
+            to: currentChat._id,
+          });
+          
+          setMessages(response.data);
+        } catch (error) {
+          console.error("Error fetching messages:", error);
+        }
+      }
     };
     
-    setMessages([...messages, newMessage]);
-    setInputMessage("");
+    fetchMessages();
+  }, [currentChat, currentUser]);
+
+
+  const handleSendMessage = async (e) => {
+    if (e) e.preventDefault();
     
-    // In a real app, you would send the message to your backend here
+    if (inputMessage.trim().length > 0) {
+      try {
+        // Send to server
+        await axios.post(sendMessageRoute, {
+          from: currentUser._id,
+          to: currentChat._id,
+          message: inputMessage,
+        });
+        
+        // Update local state with new message
+        const newMessage = {
+          fromSelf: true,
+          message: inputMessage,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        
+        setMessages([...messages, newMessage]);
+        
+        // Clear input field
+        setInputMessage("");
+      } catch (error) {
+        console.error("Error sending message:", error);
+      }
+    }
   };
 
   const handleEmojiClick = (event, emojiObject) => {
