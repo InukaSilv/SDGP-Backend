@@ -8,12 +8,13 @@ import { sendMessageRoute, getAllMessagesRoute } from "../utils/APIRoutes";
 
 
 
-export default function ChatContainer({ currentChat, currentUser }) {
+export default function ChatContainer({ currentChat, currentUser, socket }) {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const scrollRef = useRef();
   const inputRef = useRef();
+  const [arrivalMessage, setArrivalMessage] = useState(null);
 
   useEffect(() => {
     
@@ -62,6 +63,16 @@ export default function ChatContainer({ currentChat, currentUser }) {
         };
         
         setMessages([...messages, newMessage]);
+
+        socket.current.emit("send-msg",{
+            to: currentChat._id,
+            from: currentUser._id,
+            message: inputMessage,
+          });
+        
+          const msgs = [...messages];
+          msgs.push({ fromSelf: true, message: inputMessage });
+          setMessages(msgs);
         
         // Clear input field
         setInputMessage("");
@@ -70,6 +81,21 @@ export default function ChatContainer({ currentChat, currentUser }) {
       }
     }
   };
+
+
+  useEffect(() => {
+    if(socket.current) {
+        socket.current.on("msg-recieve",(inputMessage) => {
+            setArrivalMessage({fromSelf: false, message: inputMessage });
+        });
+    }
+  },[]);
+
+  useEffect(() => {
+    arrivalMessage && setMessages((prev) => [...prev, arrivalMessage]);
+  },[arrivalMessage]);
+
+
 
   const handleEmojiClick = (event, emojiObject) => {
     // Handle different versions of emoji-picker-react
@@ -162,6 +188,8 @@ export default function ChatContainer({ currentChat, currentUser }) {
     setShowEmojiPicker(false); // Close picker after sending
   };
 
+
+  
   return (
     <Container>
       <div className="chat-header">
@@ -177,7 +205,7 @@ export default function ChatContainer({ currentChat, currentUser }) {
           </div>
           <div className="username">
             <h3>{currentChat?.username}</h3>
-            <div className="status">online</div>
+            {/* <div className="status">online</div> */}
           </div>
         </div>
         <div className="chat-options">
@@ -345,7 +373,7 @@ const Container = styled.div`
       justify-content: flex-end;
       
       .content {
-        background-color: #4f04ff21;
+        background-color:rgba(79, 4, 255, 0.36);
         color: white;
         border-top-right-radius: 0;
       }
@@ -355,7 +383,7 @@ const Container = styled.div`
       justify-content: flex-start;
       
       .content {
-        background-color: #9900ff20;
+        background-color:rgba(153, 0, 255, 0.36);
         color: white;
         border-top-left-radius: 0;
       }
@@ -376,9 +404,10 @@ const Container = styled.div`
       .emoji-button {
         display: flex;
         align-items: center;
-        color: #ffff00c8;
-        font-size: 1.5rem;
+        color:rgb(255, 230, 0);
+        font-size: 3rem;
         cursor: pointer;
+        transform: translateX(-10px);
       }
       
       .emoji-picker-container {
@@ -464,7 +493,8 @@ const Container = styled.div`
     }
     
     .send-button {
-      height: 60%;
+      height: 50%;
+      width: 40px;
       background-color: #9a86f3;
       border: none;
       border-radius: 2rem;
@@ -478,7 +508,7 @@ const Container = styled.div`
       
       .send-icon {
         font-size: 1.3rem;
-        transform: rotate(90deg);
+        transform: rotate(0deg);
       }
     }
   }
