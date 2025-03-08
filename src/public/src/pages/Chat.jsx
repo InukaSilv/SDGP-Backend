@@ -3,6 +3,7 @@ import axios from "axios";
 import styled from "styled-components";
 import { useNavigate } from "react-router-dom";
 import Contacts from "../components/Contacts";
+import ChatContainer from "../components/ChatContainer";
 import { allUsersRoute } from "../utils/APIRoutes";
 
 function Chat() {
@@ -10,13 +11,15 @@ function Chat() {
   const [contacts, setContacts] = useState([]);
   const [currentUser, setCurrentUser] = useState(undefined);
   const [currentChat, setCurrentChat] = useState(undefined);
+  const [isLoaded, setIsLoaded] = useState(false);
   
   useEffect(() => {
     const fetchData = async () => {
       if (!localStorage.getItem("chat-app-user")){
         navigate("/login");
       } else {
-        setCurrentUser(await JSON.parse(localStorage.getItem("chat-app-user")))
+        setCurrentUser(await JSON.parse(localStorage.getItem("chat-app-user")));
+        setIsLoaded(true);
       }
     };
     fetchData();
@@ -24,8 +27,7 @@ function Chat() {
   
   useEffect(() => {
     const fetchContacts = async () => {
-      if(currentUser) {
-        
+      if(currentUser && currentUser._id) {
         try {
           const response = await axios.get(`${allUsersRoute}/${currentUser._id}`);
           setContacts(response.data);
@@ -35,8 +37,10 @@ function Chat() {
       }
     };
     
-    fetchContacts();
-  }, [currentUser]);
+    if (isLoaded) {
+      fetchContacts();
+    }
+  }, [currentUser, isLoaded]);
 
   const handleChatChange = (chat) => {
     setCurrentChat(chat);
@@ -50,10 +54,13 @@ function Chat() {
           currentUser={currentUser} 
           changeChat={handleChatChange}
         />
-        
+      
         <div className="chat-container">
           {currentChat ? (
-            <div>Chat with {currentChat.username}</div>
+            <ChatContainer 
+              currentChat={currentChat} 
+              currentUser={currentUser} 
+            />
           ) : (
             <div className="welcome">
               <h1>Welcome to RiVVe Chat!</h1>
@@ -90,13 +97,18 @@ const Container = styled.div`
   }
   .chat-container {
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     color: white;
+    height: 100%;
+    width: 100%;
     .welcome {
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
+      height: 100%;
     }
   }
 `;
