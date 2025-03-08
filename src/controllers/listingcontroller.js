@@ -1,5 +1,19 @@
 const Listing = require("../models/Listing");
 const User = require("../models/User");
+const {Server} = require("socket.io");
+let io;
+const initializeSocket = (server) =>{
+  io = new Server(server,{
+    cors:{
+      origin:"http://localhost:5173",
+      methods:["GET", "POST","PUT"],
+    }
+  })
+console.log("Socket initialized")
+  io.on("connection", (socket) =>{
+    console.log("client connected: ", socket.id)
+  })
+}
 
 // @desc    Get all listings
 // @route   GET /api/listings
@@ -27,7 +41,7 @@ const getAllListings = async (req, res, next) => {
 // @route   POST /api/listings
 // @access  Private (landlords only)
 const createListing = async (req, res, next) => {
-  console.log("came to create");
+
   const {
     title,
     description,
@@ -43,7 +57,7 @@ const createListing = async (req, res, next) => {
     doubleRoom,
     address
   } = req.body;
-  console.log("Request body",req.body);
+  
   // Validate required fields
   if (
     !title ||
@@ -99,6 +113,42 @@ const createListing = async (req, res, next) => {
     console.log("Request body error",req.body);
   }
 };
+
+// retreive all the listing of a particular landlord 
+const searchPersonalListing = async(req,res) => {
+  try{
+    const personalListing = await Listing.find({landlord:req.user._id});
+    if(personalListing.length === 0){
+      return res.status(404).json({message:"No listing found for this landlord"});
+    }
+    return res.status(200).json(personalListing);
+  }catch (err){
+console.error(err);
+  }
+}
+
+const addslots = async(req,res) => {
+try{
+  const {operation , adId} = req.body;
+  const property = await Listing.findById(adId);
+  if(!property){
+    return res.status(404).json({message:"Listnig not found"});
+  }
+  if(operation === "add"){
+    property.residents += 1;
+  }else if(operation === "minus" && property.residents > 0){
+    property.residents -=1
+  }else{
+    return res.status(400).json({message:"Invalid operation"});
+  }
+  await property.save();
+  io.emit("slotsUpdated", {adId, residents:property.residents});
+}catch(err){
+  console.error(err)
+}
+}
+
+
 
 
 // @desc    Update a listing
@@ -283,4 +333,7 @@ module.exports = {
   deleteListing,
   updateListingImages,
   addReview,
+  searchPersonalListing,
+  addslots,
+  initializeSocket
 };

@@ -1,5 +1,5 @@
 const express = require("express");
-const { createListing } = require("../controllers/listingcontroller");
+const { createListing, searchPersonalListing, addslots } = require("../controllers/listingcontroller");
 const multer = require("multer");
 const { uploadImage } = require("../config/azureStorage");
 const { protect } = require("../middlewares/authMiddleware");
@@ -15,12 +15,12 @@ const upload = multer({
     }
 })
 
+// add listing
 router.post("/listing-all",protect,upload.array("images",7), async(req,res ,next)=>{
     try{
         if(!req.files || req.files.length === 0){
             return res.status(400).send({message:"No file uploaded."});
         }
-        console.log("Came to upload images");
         const imageUrls = [];
         for(const file of req.files){
             const url = await uploadImage(file);
@@ -32,5 +32,15 @@ router.post("/listing-all",protect,upload.array("images",7), async(req,res ,next
         next(err);
     }
 });
+
+//get lisitng under 1 propfile to view all at once
+router.get("/profile-listing",protect, async (req, res,next)=>{
+searchPersonalListing(req, res);
+})
+
+// add slots displayed
+router.put("/add-slot", protect, async(req,res,next)=>{
+addslots(req,res);
+})
 
 module.exports = router;

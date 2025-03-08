@@ -5,12 +5,18 @@ const authRoutes = require('./routes/authRoutes');
 const LstRoutes = require('./routes/LstRoutes')
 const admin = require('./config/firebaseAdmin'); // Ensure Firebase is initialized
 const cors = require('cors');
+const http = require("http");
+const {initializeSocket} = require("./controllers/listingcontroller")
+
 
 const app = express();
-
+const server = http.createServer(app);
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+initializeSocket(server); // Initialize Socket.io
+
 
 // Connect to MongoDB
 mongoose.connect(process.env.MONGO_URI, {
@@ -29,6 +35,6 @@ app.use((err, req, res, next) => {
     res.status(err.statusCode || 500).json({ success: false, message: err.message || 'Server Error' });
 });
 
-// Start the server
+// Start the HTTP server (not app.listen())
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
