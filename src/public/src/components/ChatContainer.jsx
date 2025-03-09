@@ -5,23 +5,18 @@ import Picker from "emoji-picker-react";
 import axios from "axios";
 import { sendMessageRoute, getAllMessagesRoute } from "../utils/APIRoutes";
 
-
-
-
 export default function ChatContainer({ currentChat, currentUser, socket }) {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const scrollRef = useRef();
   const inputRef = useRef();
+  const chatMessagesRef = useRef();
   const [arrivalMessage, setArrivalMessage] = useState(null);
 
   useEffect(() => {
-    
     setMessages([]);
-    
   }, [currentChat]);
-
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -42,7 +37,6 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
     fetchMessages();
   }, [currentChat, currentUser]);
 
-
   const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
     
@@ -55,24 +49,24 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
           message: inputMessage,
         });
         
+        // Format timestamp
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        // Emit message to socket
+        socket.current.emit("send-msg", {
+          to: currentChat._id,
+          from: currentUser._id,
+          message: inputMessage,
+        });
+        
         // Update local state with new message
         const newMessage = {
           fromSelf: true,
           message: inputMessage,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          timestamp: timestamp
         };
         
-        setMessages([...messages, newMessage]);
-
-        socket.current.emit("send-msg",{
-            to: currentChat._id,
-            from: currentUser._id,
-            message: inputMessage,
-          });
-        
-          const msgs = [...messages];
-          msgs.push({ fromSelf: true, message: inputMessage });
-          setMessages(msgs);
+        setMessages((prev) => [...prev, newMessage]);
         
         // Clear input field
         setInputMessage("");
@@ -82,20 +76,29 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
     }
   };
 
-
   useEffect(() => {
     if(socket.current) {
-        socket.current.on("msg-recieve",(inputMessage) => {
-            setArrivalMessage({fromSelf: false, message: inputMessage });
+      socket.current.on("msg-recieve", (msg) => {
+        const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        setArrivalMessage({
+          fromSelf: false, 
+          message: msg,
+          timestamp: timestamp
         });
+      });
     }
-  },[]);
+    
+    // Clean up event listener on component unmount
+    return () => {
+      if(socket.current) {
+        socket.current.off("msg-recieve");
+      }
+    };
+  }, []);
 
   useEffect(() => {
     arrivalMessage && setMessages((prev) => [...prev, arrivalMessage]);
-  },[arrivalMessage]);
-
-
+  }, [arrivalMessage]);
 
   const handleEmojiClick = (event, emojiObject) => {
     // Handle different versions of emoji-picker-react
@@ -148,14 +151,10 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
     
     // If input field is empty, send emoji as a standalone message
     if (inputMessage.trim().length === 0) {
-      const newMessage = {
-        fromSelf: true,
-        message: emoji,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      };
-      
-      setMessages([...messages, newMessage]);
-      // In a real app, you would send the message to your backend here
+      setInputMessage(emoji);
+      setTimeout(() => {
+        handleSendMessage();
+      }, 10);
     } else {
       // Otherwise, add emoji to input and don't send yet
       handleEmojiClick(event, emojiObject);
@@ -163,7 +162,10 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
   };
 
   useEffect(() => {
-    scrollRef.current?.scrollIntoView({ behavior: "smooth" });
+    // Auto-scroll to bottom when messages change
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+    }
   }, [messages]);
 
   const toggleEmojiPicker = () => {
@@ -187,8 +189,6 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
     handleSendEmoji(event, emojiObject);
     setShowEmojiPicker(false); // Close picker after sending
   };
-
-
   
   return (
     <Container>
@@ -205,7 +205,6 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
           </div>
           <div className="username">
             <h3>{currentChat?.username}</h3>
-            {/* <div className="status">online</div> */}
           </div>
         </div>
         <div className="chat-options">
@@ -213,7 +212,7 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
         </div>
       </div>
       
-      <div className="chat-messages">
+      <div className="chat-messages" ref={chatMessagesRef}>
         {messages.map((message, index) => (
           <div 
             key={index} 
@@ -238,12 +237,11 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
               <Picker 
                 onEmojiClick={handleEmojiClick}
                 onEmojiDoubleClick={handleEmojiDoubleClick}
-                searchDisabled={true}
+                searchDisabled={false}
                 skinTonesDisabled={true}
                 width={280}
                 height={350}
               />
-              
             </div>
           )}
         </div>
@@ -263,18 +261,26 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
 }
 
 const Container = styled.div`
-  display: grid;
-  grid-template-rows: 10% 80% 10%;
-  gap: 0.1rem;
-  overflow: hidden;
+  position: relative;
   height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
   
   .chat-header {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 0 2rem;
     background-color: #080420;
+    height: 10%;
+    min-height: 60px;
+    z-index: 10;
     
     .user-details {
       display: flex;
@@ -306,11 +312,6 @@ const Container = styled.div`
           color: white;
           margin-bottom: 0.2rem;
         }
-        
-        .status {
-          color: #4cc23d;
-          font-size: 0.8rem;
-        }
       }
     }
     
@@ -327,11 +328,17 @@ const Container = styled.div`
   }
   
   .chat-messages {
+    position: absolute;
+    top: 10%;
+    bottom: 10%;
+    left: 0;
+    right: 0;
     padding: 1rem 2rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    overflow: auto;
+    overflow-y: auto;
+    min-height: 60px;
     
     &::-webkit-scrollbar {
       width: 0.2rem;
@@ -373,7 +380,7 @@ const Container = styled.div`
       justify-content: flex-end;
       
       .content {
-        background-color:rgba(79, 4, 255, 0.36);
+        background-color: rgba(79, 4, 255, 0.36);
         color: white;
         border-top-right-radius: 0;
       }
@@ -383,7 +390,7 @@ const Container = styled.div`
       justify-content: flex-start;
       
       .content {
-        background-color:rgba(153, 0, 255, 0.36);
+        background-color: rgba(153, 0, 255, 0.36);
         color: white;
         border-top-left-radius: 0;
       }
@@ -391,12 +398,18 @@ const Container = styled.div`
   }
   
   .chat-input {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
     display: grid;
     grid-template-columns: 5% 85% 10%;
     align-items: center;
     background-color: #080420;
     padding: 0 2rem;
-    position: relative;
+    height: 10%;
+    min-height: 60px;
+    z-index: 10;
     
     .emoji-area {
       position: relative;
@@ -404,73 +417,90 @@ const Container = styled.div`
       .emoji-button {
         display: flex;
         align-items: center;
-        color:rgb(255, 230, 0);
-        font-size: 3rem;
+        color: rgb(255, 230, 0);
+        font-size: 1.5rem;
         cursor: pointer;
-        transform: translateX(-10px);
       }
       
       .emoji-picker-container {
         position: absolute;
         bottom: 4rem;
         left: 0;
-        z-index: 10;
+        z-index: 20;
         display: flex;
         flex-direction: column;
         
-        .emoji-picker-instructions {
-          display: flex;
-          flex-direction: column;
-          font-size: 0.7rem;
-          padding: 0.3rem;
-          background-color: #080420;
-          color: #9a86f3;
-          border-bottom-left-radius: 5px;
-          border-bottom-right-radius: 5px;
-          border: 1px solid #9a86f3;
-          border-top: none;
-        }
-        
         /* Custom styling for the emoji picker */
         .EmojiPickerReact, .emoji-picker-react {
-          background-color: #080420;
-          box-shadow: 0 5px 10px #9a86f3;
-          border-color: #9a86f3;
-          max-width: 280px;
-          height: 350px;
-          
-          .emoji-scroll-wrapper::-webkit-scrollbar,
-          .emoji-categories::-webkit-scrollbar,
-          .epr-body::-webkit-scrollbar {
+            background-color: #080420;
+            box-shadow: 0 5px 10px #9a86f3;
+            border-color: #9a86f3;
+            max-width: 280px;
+            height: 350px;
+            
+
+            .epr-search-container, .emoji-search, .emoji-mart-search {
+            width: 100%;
+            padding: 10px;
+            background-color: #080420;
+            border-bottom: 1px solid #9a86f3;
+            display: flex;
+            align-items: center;
+            border-radius: 8px;
+            gap: 8px;
+            }
+            
+            .epr-search, .emoji-search input, .emoji-mart-search input {
+            width: 100%;
+            background-color: #ffffff34;
+            color: white;
+            border: 1px solid #9a86f3;
+            border-radius: 4px;
+            padding: 6px;
+            font-size: 0.9rem;
+            
+            &::placeholder {
+                color: rgba(255, 255, 255, 0.5);
+            }
+            
+            &:focus {
+                outline: none;
+                border-color: #4e0eff;
+            }
+            }
+
+
+            /* Target the background of emoji category headers */
+            .emoji-group-names, .emoji-categories, .epr-category-nav,
+            .epr-header-overlay, .emoji-categories-list, .emoji-group-header,
+            .epr-category-nav-item, .emoji-category-wrapper, .emoji-categories-nav,
+            .emoji-mart-anchors, .emoji-mart-category-label, .emoji-mart-category .emoji-mart-category-label {
+            background-color: #080420 !important; /* Dark purple background to match your theme */
+            }
+            
+            /* Additional specific targets for category backgrounds */
+            .emoji-group-title, .emoji-category-label, .epr-category-label,
+            .epr-emoji-category-label, .emoji-picker-category-title,
+            .emoji-mart-category-label, .emoji-category-header {
+            background-color: #080420 !important;
+            }
+            
+            .emoji-scroll-wrapper::-webkit-scrollbar,
+            .emoji-categories::-webkit-scrollbar,
+            .epr-body::-webkit-scrollbar {
             background-color: #080420;
             width: 5px;
             &-thumb {
-              background-color: #9a86f3;
+                background-color: #9a86f3;
             }
-          }
-          
-          .emoji-categories button {
-            filter: contrast(0);
-          }
-          
-          .epr-search {
+            }
+            
+            .epr-search {
             background-color: transparent;
             border-color: #9a86f3;
-          }
-          
-          .epr-emoji-category-label {
-            background-color: #080420;
-          }
-          
-          .epr-emoji-category-content .epr-emoji-category-content button {
-            filter: grayscale(0);
-          }
-          
-          .epr-preview {
-            display: none;
-          }
+            }
         }
-      }
+    }
     }
     
     input {
