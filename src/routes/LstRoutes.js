@@ -1,5 +1,5 @@
 const express = require("express");
-const { createListing, searchPersonalListing, addslots } = require("../controllers/listingcontroller");
+const { createListing, searchPersonalListing, addslots, getListing } = require("../controllers/listingcontroller");
 const multer = require("multer");
 const { uploadImage } = require("../config/azureStorage");
 const { protect } = require("../middlewares/authMiddleware");
@@ -42,5 +42,11 @@ searchPersonalListing(req, res);
 router.put("/add-slot", protect, async(req,res,next)=>{
 addslots(req,res);
 })
+
+router.get("/get-listing", async(req, res, next)=>{
+    getListing(req,res);
+})
+
+router.put("/update-lis")
 
 module.exports = router;

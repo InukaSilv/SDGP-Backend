@@ -127,6 +127,7 @@ console.error(err);
   }
 }
 
+// chnaging the slots in myAds
 const addslots = async(req,res) => {
 try{
   const {operation , adId} = req.body;
@@ -146,6 +147,37 @@ try{
 }catch(err){
   console.error(err)
 }
+}
+
+// retreiveing property based on location
+const getListing = async(req,res) =>{
+  try{
+    let {lat, lng, radius} = req.query;
+    if(!lat || !lng || !radius){
+      return res.status(400).json({error:"lng or lat not provided properly"});
+    }
+    newlat = parseFloat(lat);
+    newlng = parseFloat(lng);
+    newradius = parseFloat(radius);
+
+    console.log("came to get the properties")
+    console.log(lat);
+    console.log(lng);
+    console.log(radius);
+
+   const ads = await Listing.find({
+  location: {
+    $geoWithin: {
+      $centerSphere: [[lng, lat], radius/ 6378.1], 
+    },
+  },
+});
+console.log(ads);
+res.status(200).json(ads);
+  }catch(error){
+    console.error("Error fetching ads: ",error);
+    res.status(500).json({error:"Server Error"});
+  }
 }
 
 
@@ -335,5 +367,6 @@ module.exports = {
   addReview,
   searchPersonalListing,
   addslots,
-  initializeSocket
+  initializeSocket,
+  getListing
 };

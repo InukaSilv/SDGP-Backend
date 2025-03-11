@@ -37,14 +37,8 @@ const listingSchema = new mongoose.Schema({
     required:true,
   },
   location: {
-    type: {
-      type: String,
-      default: "Point",
-    },
-    coordinates: {
-      type: [Number], // [longitude, latitude]
-      required: true,
-    },
+    type: { type: String, enum: ["Point"], required: true },
+    coordinates: { type: [Number], required: true },
   },
   images: {
     type: [String], // Array of image URLs
