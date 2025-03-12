@@ -18,7 +18,7 @@ const protect = async (req, res, next) => {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
             // Get user from token
-            req.user = await User.findById(decoded.id).select('-password');
+            req.user = await User.findById(decoded.userId || decoded.id).select('-password');
 
             if (!req.user) {
                 return res.status(401).json({ message: 'Unauthorized: User not found' });
@@ -26,13 +26,13 @@ const protect = async (req, res, next) => {
 
             next();
         } catch (error) {
-            logger.warn('Token verification failed', error);
+            console.warn('Token verification failed', error);
             return res.status(401).json({ message: 'Unauthorized: Invalid token' });
         }
     }
 
     if (!token) {
-        logger.warn('Unauthorized access attempt without token');
+        console.warn('Unauthorized access attempt without token');
         return res.status(401).json({ message: 'Unauthorized: No token provided' });
     }
 };
