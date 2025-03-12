@@ -8,7 +8,7 @@ const logger = require("../utils/logger");
 const { sendEmail } = require("../utils/emailUtils");
 
 //  Initiates a Stripe payment (called when user starts payment)
-const initiatePayment = asyncHandler(async (req, res) => {
+const createCheckoutSession = asyncHandler(async (req, res) => {
     const { featureType, currency = "LKR" } = req.body;
     const userId = req.user.id;
 
@@ -38,36 +38,39 @@ const initiatePayment = asyncHandler(async (req, res) => {
     }
     expiryDate.setDate(expiryDate.getDate() + 30)
 
-    const amount = PRICES[featureType]; // Use fixed price
+    const amount = PRICES[featureType] * 100; // Use fixed price
 
     try {
-        // Create Stripe payment intent
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: amount * 100, // Convert to cents
-            currency,
-            metadata: { userId, featureType, userRole: user.role},
+        // Create Stripe payment session
+        const session = await stripe.paymentIntents.create({
+            payment_method_types: ["card"],
+            mode: "subscription",
+            line_items: [
+                {
+                    price_data: {
+                        currency: "LKR",
+                        product_data: {
+                            name: `${featureType.toUpperCase()} Subscription`,
+                        },
+                        unit_amount: amount,
+                    },
+                    quantity: 1,
+                },
+            ],
+            success_url: `${process.env.CLIENT_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${process.env.CLIENT_URL}/cancel`,
+            metadata: {
+                userId,
+                featureType,
+                userRole: user.role,
+            },
         });
 
-        // Store payment details in MongoDB
-        const newPayment = new Payment({
-            userId,
-            userRole: user.role,
-            featureType,
-            amount,
-            currency,
-            status: "pending",
-            transactionId: paymentIntent.id,
-            boughtDate: new Date(),
-            subscriptionExpiry: expiryDate, 
-        });
-
-        await newPayment.save();
-        logger.info(`Payment initiated: ${user.email} - ${featureType} - ${user.role} - LKR ${amount}`);
-        res.json({ success: true, clientSecret: paymentIntent.client_secret });
+        res.json({ url: session.url });
 
     } catch (error) {
-        logger.error(`Payment initiation failed: ${error.message}`);
-        res.status(500).json({ error: "Payment initiation failed"});
+        logger.error(`Checkout session creation failed: ${error.message}`);
+        res.status(500).json({ error: "Failed to create checkout session"});
     }
 });
 
@@ -87,13 +90,18 @@ const handleWebhook = asyncHandler(async (req, res) => {
     if(!payment) return res.status(404).json({error: "Payment record not found."});
 
 //Handle successful payment    
-    if (event.type === "payment_intent.succeeded") {
+    if (event.type === "checkout.session.completed") {
         payment.status = "success";
+        const session = event.data.object;
+        const { userId, featureType } = session.metadata;
 
     // Extend or replace subscription expiry based on user plan
         const user = await User.findById(payment.userId);
-        let expiryDate = new Date();
+        if (!user) {
+            return res.status(404).json({ error: "User not found" });
+        }
 
+        let expiryDate = new Date();
         const activePayment = await Payment.findOne({ userId: payment.userId, status: "success" });
 
         if (activePayment && new Date(activePayment.subscriptionExpiry) > new Date()) {
@@ -101,7 +109,23 @@ const handleWebhook = asyncHandler(async (req, res) => {
         }
 
         expiryDate.setDate(expiryDate.getDate() + 30);
-        payment.subscriptionExpiry = expiryDate; // Update the expiry in Payment collection
+
+        // Store payment details in MongoDB
+        const newPayment = new Payment({
+            userId,
+            userRole: user.role,
+            featureType,
+            amount,
+            currency,
+            status: "pending",
+            transactionId: paymentIntent.id,
+            boughtDate: new Date(),
+            subscriptionExpiry: expiryDate, 
+        });
+
+        await newPayment.save();
+        logger.info(`Payment initiated: ${user.email} - ${featureType} - ${user.role} - LKR ${amount}`);
+        res.json({ success: true, clientSecret: paymentIntent.client_secret });
 
         // If upgrading, remove the previous subscription
         if (user.isPremium && user.role === "student" && payment.featureType === "advanced") {
@@ -115,16 +139,16 @@ const handleWebhook = asyncHandler(async (req, res) => {
 
         
         // Send email confirmation
-        if (user) {
-            sendEmail(user.email, "Subscription Activated", `
-                <p>Dear ${user.firstName},</p>
-                <p>Your <strong>${payment.featureType}</strong> subscription is now active.</p>
-                <p>Subscription Expiry Date: ${new Date(payment.subscriptionExpiry).toDateString()}</p>
-                <p>Thank you for your support!</p>
-                <p>Best Regards, <br/> RiVVE Team</p>
-            `);
-            logger.info(`Email sent to ${user.email} | Payment ID: ${paymentIntent.id}`);
-        } 
+        sendEmail(user.email, "Subscription Activated", `
+            <p>Dear ${user.firstName},</p>
+            <p>Your <strong>${payment.featureType}</strong> subscription is now active.</p>
+            <p>Subscription Expiry Date: ${new Date(payment.subscriptionExpiry).toDateString()}</p>
+            <p>Thank you for your support!</p>
+            <p>Best Regards, <br/> RiVVE Team</p>
+        `);
+        logger.info(`Email sent to ${user.email} | Payment ID: ${paymentIntent.id}`);
+        res.status(200).json({ received: true });
+        
     }     
 //Handle failed payment        
     else if (event.type === "payment_intent.payment_failed") {
@@ -162,4 +186,4 @@ const getPaymentHistory = asyncHandler(async (req, res) => {
     }
 });
 
-module.exports = { initiatePayment, handleWebhook, getPaymentHistory };
+module.exports = { createCheckoutSession, handleWebhook, getPaymentHistory };

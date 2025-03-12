@@ -1,15 +1,11 @@
 const express = require("express");
 const router = express.Router();
-const { initiatePayment, handleWebhook, getPaymentHistory } = require("../controllers/paymentcontroller");
+const { createCheckoutSession, handleWebhook, getPaymentHistory } = require("../controllers/paymentcontroller");
 const { protect } = require("../middlewares/authMiddleware");
 
 // Route to create a Stripe payment intent
-router.post("/create-payment-intent", protect, (req, res, next) => {
-    if (process.env.NODE_ENV !== "production") {
-        console.log("✅ Payment initiation route hit!");
-    }    
-    next();
-}, initiatePayment);
+router.post("/create-checkout-session", protect, createCheckoutSession);
+
 
 //Route to handle Stripe webhook events
 router.post("/webhook", express.raw({ type: "application/json" }), handleWebhook);
