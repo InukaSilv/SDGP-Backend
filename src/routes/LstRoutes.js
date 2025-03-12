@@ -1,7 +1,7 @@
 const express = require("express");
-const { createListing, searchPersonalListing, addslots, getListing } = require("../controllers/listingcontroller");
+const { createListing, searchPersonalListing, addslots, getListing, updateListing,deleteListing } = require("../controllers/listingcontroller");
 const multer = require("multer");
-const { uploadImage } = require("../config/azureStorage");
+const { uploadImage,deleteImage } = require("../config/azureStorage");
 const { protect } = require("../middlewares/authMiddleware");
 
 const router = express.Router();
@@ -16,7 +16,7 @@ const upload = multer({
 })
 
 // add listing
-router.post("/listing-all",protect,upload.array("images",7), async(req,res ,next)=>{
+router.post("/listing-all",protect,upload.array("images",6), async(req,res ,next)=>{
     try{
         if(!req.files || req.files.length === 0){
             return res.status(400).send({message:"No file uploaded."});
@@ -47,6 +47,41 @@ router.get("/get-listing", async(req, res, next)=>{
     getListing(req,res);
 })
 
-router.put("/update-lis")
+router.put("/update-listing", protect, upload.array("images", 6), async (req, res, next) => {
+    try {
+        let { removeImages = [] } = req.body;
+        if (typeof removeImages === "string") {
+            removeImages = [removeImages];
+        }
+
+        if (removeImages.length === 0 && (!req.files || req.files.length === 0)) {
+            return updateListing(req, res);
+        }
+        if (removeImages.length > 0) {
+            for (const url of removeImages) {
+                await deleteImage(url);
+            }
+        }
+        const imageUrls = [];
+        if (req.files && req.files.length > 0) {
+            for (const file of req.files) {
+                const url = await uploadImage(file);
+                imageUrls.push(url);
+            }
+        }
+        req.imageUrls = imageUrls;
+
+        updateListing(req, res);
+        
+    } catch (err) {
+        next(err);
+    }
+});
+
+
+router.delete("/delete-post", protect, async(req,res,next)=>{
+deleteListing(req,res);
+})
+
 
 module.exports = router;

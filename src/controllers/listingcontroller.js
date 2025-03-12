@@ -1,3 +1,4 @@
+const { deleteImage } = require("../config/azureStorage");
 const Listing = require("../models/Listing");
 const User = require("../models/User");
 const {Server} = require("socket.io");
@@ -186,55 +187,55 @@ res.status(200).json(ads);
 // @desc    Update a listing
 // @route   PUT /api/listings/:id
 // @access  Private (landlords only)
-const updateListing = async (req, res, next) => {
-  const {
-    title,
-    description,
-    housingType,
-    roomTypes,
-    facilities,
-    maxResidents,
-    contactNumber,
-    location,
-  } = req.body;
+// const updateListing = async (req, res, next) => {
+//   const {
+//     title,
+//     description,
+//     housingType,
+//     roomTypes,
+//     facilities,
+//     maxResidents,
+//     contactNumber,
+//     location,
+//   } = req.body;
 
-  try {
-    const listing = await Listing.findById(req.params.id);
+//   try {
+//     const listing = await Listing.findById(req.params.id);
 
-    if (!listing) {
-      return res.status(404).json({ message: "Listing not found" });
-    }
+//     if (!listing) {
+//       return res.status(404).json({ message: "Listing not found" });
+//     }
 
-    // Check if the logged-in user is the landlord
-    if (listing.landlord.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: "Not authorized" });
-    }
+//     // Check if the logged-in user is the landlord
+//     if (listing.landlord.toString() !== req.user._id.toString()) {
+//       return res.status(401).json({ message: "Not authorized" });
+//     }
 
-    // Update listing fields
-    listing.title = title || listing.title;
-    listing.description = description || listing.description;
-    listing.housingType = housingType || listing.housingType;
-    listing.roomTypes = roomTypes || listing.roomTypes;
-    listing.facilities = facilities || listing.facilities;
-    listing.maxResidents = maxResidents || listing.maxResidents;
-    listing.contactNumber = contactNumber || listing.contactNumber;
+//     // Update listing fields
+//     listing.title = title || listing.title;
+//     listing.description = description || listing.description;
+//     listing.housingType = housingType || listing.housingType;
+//     listing.roomTypes = roomTypes || listing.roomTypes;
+//     listing.facilities = facilities || listing.facilities;
+//     listing.maxResidents = maxResidents || listing.maxResidents;
+//     listing.contactNumber = contactNumber || listing.contactNumber;
 
-    // Update location (coordinates)
-    if (location?.coordinates) {
-      listing.location.coordinates = [
-        location.coordinates.longitude || listing.location.coordinates[0],
-        location.coordinates.latitude || listing.location.coordinates[1],
-      ];
-    }
+//     // Update location (coordinates)
+//     if (location?.coordinates) {
+//       listing.location.coordinates = [
+//         location.coordinates.longitude || listing.location.coordinates[0],
+//         location.coordinates.latitude || listing.location.coordinates[1],
+//       ];
+//     }
 
-    const updatedListing = await listing.save();
-    res.json(updatedListing);
-  } catch (err) {
-    next(err);
-    console.log(err);
+//     const updatedListing = await listing.save();
+//     res.json(updatedListing);
+//   } catch (err) {
+//     next(err);
+//     console.log(err);
     
-  }
-};
+//   }
+// };
 
 // @desc    Search listings by location
 // @route   GET /api/listings/search
@@ -254,7 +255,7 @@ const searchListings = async (req, res, next) => {
             type: "Point",
             coordinates: [parseFloat(longitude), parseFloat(latitude)],
           },
-          $maxDistance: 5000, // 5km radius
+          $maxDistance: 5000, 
         },
       },
     }).populate("landlord", "firstName lastName email");
@@ -264,6 +265,42 @@ const searchListings = async (req, res, next) => {
     next(err);
   }
 };
+
+const updateListing = async (req, res, next) =>{
+  try{
+  const{
+    title,
+    description,
+    facilities,
+    contact,
+    price,
+    singleRoom,
+    doubleRoom,
+    removeImages=[],
+    imageUrls=[],
+  } = req.body;
+
+  const property = await Listing.findOne({_id:req.body.propertyId});
+  property.title = title;
+  property.description = description;
+  property.facilities = facilities;
+  property.contact= contact;
+  property.price = price;
+  property.singleRoom = singleRoom;
+  property.doubleRoom = doubleRoom;
+if(removeImages.length>0){
+  property.images = property.images.filter(img => !removeImages.includes(img));
+}
+
+if (req.imageUrls && req.imageUrls.length > 0) {
+  property.images = [...property.images, ...req.imageUrls];
+}
+await property.save();
+res.status(200).json({ message: "Listing updated successfully", property });
+  }catch(error){
+    console.log(error);
+  }
+}
 
 // @desc    Add a review to a listing
 // @route   POST /api/listings/:id/reviews
@@ -302,31 +339,39 @@ const addReview = async (req, res, next) => {
 // @route   DELETE /api/listings/:id
 // @access  Private (landlords only)
 const deleteListing = async (req, res, next) => {
-  try {
-    const listing = await Listing.findById(req.params.id);
+  try{
+    console.log("came to delete");
+    const listing = await Listing.findById(req.body.propertyId);
 
     if (!listing) {
       return res.status(404).json({ message: "Listing not found" });
     }
-
-    // Check if the logged-in user is the landlord
-    if (listing.landlord.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: "Not authorized" });
+    for(const img of listing.images){
+      await deleteImage(img);
     }
-
-    // Remove the listing ID from the landlord's ads array
-    await User.findByIdAndUpdate(req.user._id, {
-      $pull: { ads: listing._id },
-    });
-
-    // Delete the listing
-    await listing.remove();
-
-    res.json({ message: "Listing deleted successfully" });
-  } catch (err) {
+    await listing.deleteOne();
+    res.status(200).json({ message: "Listing deleted successfully" });
+  }catch(err){
     next(err);
   }
-};
+
+
+  };
+    // if (!listing) {
+    //   return res.status(404).json({ message: "Listing not found" });
+    // }
+
+    // // Check if the logged-in user is the landlord
+    // if (listing.landlord.toString() !== req.user._id.toString()) {
+    //   return res.status(401).json({ message: "Not authorized" });
+    // }
+
+    // // Delete the listing
+    // await listing.remove();
+
+    // res.json({ message: "Listing deleted successfully" });
+
+
 
 // @desc    Update listing images
 // @route   PUT /api/listings/:id/images

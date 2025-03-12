@@ -26,4 +26,28 @@ const uploadImage = async (file) => {
   }
 };
 
-module.exports = { uploadImage };
+const deleteImage = async (imageUrl) => {
+  try {
+    // Extract blob name and decode it
+    const urlParts = imageUrl.split("/");
+    const blobName = decodeURIComponent(urlParts[urlParts.length - 1]); 
+
+    console.log(`Attempting to delete blob: "${blobName}"`);
+
+    // Get a block blob client
+    const blockBlobClient = containerClient.getBlockBlobClient(blobName);
+
+    // Delete the blob and snapshots
+    const deleteResponse = await blockBlobClient.deleteIfExists({ deleteSnapshots: "include" });
+
+    console.log(`Delete response for "${blobName}": ${deleteResponse}`);
+    
+    return deleteResponse;
+  } catch (err) {
+    console.error(`Failed to delete image: ${err.message}`);
+    throw new Error(`Failed to delete image: ${err.message}`);
+  }
+};
+
+
+module.exports = { uploadImage,deleteImage };
