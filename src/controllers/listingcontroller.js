@@ -413,6 +413,73 @@ const updateListingImages = async (req, res, next) => {
   }
 };
 
+// @desc    Filter and sort listings
+// @route   GET /api/listings/filter
+// @access  Public
+const filterListings = async (req, res, next) => {
+  try {
+    const {
+      minPrice = 0,
+      maxPrice = Infinity,
+      housingTypes = [],
+      roomTypes = [],
+      facilities = [],
+      sortBy = "newest", // Default sorting: newest to oldest
+    } = req.query;
+
+    // Build the filter object
+    const filter = {};
+
+    // Price range filter
+    filter.price = { $gte: parseFloat(minPrice), $lte: parseFloat(maxPrice) };
+
+    // Housing type filter
+    if (housingTypes.length > 0) {
+      filter.housingType = { $in: housingTypes };
+    }
+
+    // Room type filter
+    if (roomTypes.length > 0) {
+      filter.$or = roomTypes.map((type) => ({
+        [`roomTypes.${type.toLowerCase()}Room`]: { $gt: 0 },
+      }));
+    }
+
+    // Facilities filter
+    if (facilities.length > 0) {
+      filter.facilities = { $all: facilities };
+    }
+
+    // Build the sort object
+    let sort = {};
+    switch (sortBy) {
+      case "newest":
+        sort = { createdAt: -1 }; // Newest to oldest
+        break;
+      case "oldest":
+        sort = { createdAt: 1 }; // Oldest to newest
+        break;
+      case "priceLowest":
+        sort = { price: 1 }; // Price lowest to highest
+        break;
+      case "priceHighest":
+        sort = { price: -1 }; // Price highest to lowest
+        break;
+      default:
+        sort = { createdAt: -1 }; // Default: newest to oldest
+    }
+
+    // Fetch filtered and sorted listings
+    const listings = await Listing.find(filter)
+      .sort(sort)
+      .populate("landlord", "firstName lastName email");
+
+    res.status(200).json(listings);
+  } catch (err) {
+    next(err);
+  }
+};
+
 module.exports = {
   getAllListings,
   createListing,
@@ -424,5 +491,6 @@ module.exports = {
   searchPersonalListing,
   addslots,
   initializeSocket,
-  getListing
+  getListing,
+  filterListings
 };

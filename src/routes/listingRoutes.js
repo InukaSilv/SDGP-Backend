@@ -12,6 +12,7 @@ const {
   addReview,
   updateListingImages,
   searchListings,
+  filterListings,
 } = require("../controllers/listingcontroller");
 
 // @desc    Get all listings
@@ -82,5 +83,10 @@ router.put("/:id/images", protect, upload.array("images", 7), async (req, res, n
 // @route   GET /api/listings/search
 // @access  Public
 router.get("/search", searchListings);
+
+// @desc    Filter and sort listings
+// @route   GET /api/listings/filter
+// @access  Public
+router.get("/filter", filterListings);
 
 module.exports = router;
