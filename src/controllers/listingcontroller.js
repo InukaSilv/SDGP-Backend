@@ -44,23 +44,22 @@ const getAllListings = async (req, res, next) => {
 // @route   POST /api/listings
 // @access  Private (landlords only)
 const createListing = async (req, res, next) => {
-
   const {
     title,
     description,
     housingType,
     roomType,
     facilities,
-    residents,
+    residents, 
     contact,
     lat,
     lng,
     price,
     singleRoom,
     doubleRoom,
-    address
+    address,
   } = req.body;
-  
+
   // Validate required fields
   if (
     !title ||
@@ -78,7 +77,7 @@ const createListing = async (req, res, next) => {
 
   try {
     // Upload images to Azure Blob Storage (handled in the route)
-    const imageUrls = req.imageUrls; // Assume image URLs are added to req object by the route
+    const imageUrls = req.imageUrls;
 
     // Create new listing
     const newListing = new Listing({
@@ -91,7 +90,8 @@ const createListing = async (req, res, next) => {
         doubleRoom: parseInt(doubleRoom, 10),
       },
       facilities: JSON.parse(facilities),
-      residents,
+      residents: parseInt(residents, 10), // Maximum number of slots
+      currentResidents: 0, // Initialize to 0
       contact,
       price: parseFloat(price),
       address,
@@ -104,7 +104,7 @@ const createListing = async (req, res, next) => {
 
     const savedListing = await newListing.save();
 
-    
+    // Add the listing ID to the landlord's ads array
     await User.findByIdAndUpdate(req.user._id, {
       $push: { ads: savedListing._id },
     });
@@ -113,7 +113,7 @@ const createListing = async (req, res, next) => {
   } catch (err) {
     next(err);
     console.log(err);
-    console.log("Request body error",req.body);
+    console.log("Request body error", req.body);
   }
 };
 
@@ -238,52 +238,63 @@ const checkRevieweElig = async (req, res, next) => {
 // @route   PUT /api/listings/:id
 // @access  Private (landlords only)
 // const updateListing = async (req, res, next) => {
-//   const {
-//     title,
-//     description,
-//     housingType,
-//     roomTypes,
-//     facilities,
-//     maxResidents,
-//     contactNumber,
-//     location,
-//   } = req.body;
-
 //   try {
-//     const listing = await Listing.findById(req.params.id);
+//     const {
+//       title,
+//       description,
+//       facilities,
+//       contact,
+//       price,
+//       singleRoom,
+//       doubleRoom,
+//       removeImages = [],
+//       imageUrls = [],
+//       residents, // Maximum number of slots
+//       currentResidents, // Number of students currently living there
+//     } = req.body;
 
-//     if (!listing) {
+//     const property = await Listing.findOne({ _id: req.body.propertyId });
+
+//     if (!property) {
 //       return res.status(404).json({ message: "Listing not found" });
 //     }
 
-//     // Check if the logged-in user is the landlord
-//     if (listing.landlord.toString() !== req.user._id.toString()) {
-//       return res.status(401).json({ message: "Not authorized" });
+//     // Validate currentResidents does not exceed residents
+//     if (currentResidents && currentResidents > residents) {
+//       return res.status(400).json({ message: "Current residents cannot exceed maximum residents" });
 //     }
 
 //     // Update listing fields
-//     listing.title = title || listing.title;
-//     listing.description = description || listing.description;
-//     listing.housingType = housingType || listing.housingType;
-//     listing.roomTypes = roomTypes || listing.roomTypes;
-//     listing.facilities = facilities || listing.facilities;
-//     listing.maxResidents = maxResidents || listing.maxResidents;
-//     listing.contactNumber = contactNumber || listing.contactNumber;
+//     property.title = title || property.title;
+//     property.description = description || property.description;
+//     property.facilities = facilities || property.facilities;
+//     property.contact = contact || property.contact;
+//     property.price = price || property.price;
+//     property.roomTypes.singleRoom = singleRoom || property.roomTypes.singleRoom;
+//     property.roomTypes.doubleRoom = doubleRoom || property.roomTypes.doubleRoom;
+//     property.residents = residents || property.residents;
+//     property.currentResidents = currentResidents || property.currentResidents;
 
-//     // Update location (coordinates)
-//     if (location?.coordinates) {
-//       listing.location.coordinates = [
-//         location.coordinates.longitude || listing.location.coordinates[0],
-//         location.coordinates.latitude || listing.location.coordinates[1],
-//       ];
+//     // Handle image updates
+//     if (removeImages.length > 0) {
+//       property.images = property.images.filter((img) => !removeImages.includes(img));
 //     }
 
-//     const updatedListing = await listing.save();
-//     res.json(updatedListing);
-//   } catch (err) {
-//     next(err);
-//     console.log(err);
-    
+//     if (req.imageUrls && req.imageUrls.length > 0) {
+//       property.images = [...property.images, ...req.imageUrls];
+//     }
+
+//     await property.save();
+
+//     // Notify wishlisted users if there's an opening
+//     if (currentResidents < residents) {
+//       await notifyWishlistedUsers(property._id);
+//     }
+
+//     res.status(200).json({ message: "Listing updated successfully", property });
+//   } catch (error) {
+//     console.log(error);
+//     next(error);
 //   }
 // };
 

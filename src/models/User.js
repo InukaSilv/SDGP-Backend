@@ -40,7 +40,11 @@ const UserSchema = new mongoose.Schema({
           type: mongoose.Schema.Types.ObjectId,
           ref: "Listing",
         },
-      ],
+    ],
+    wishlist: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Wishlist",
+    }],
     registerType: {
         type: String,
         enum:['password','google'],
@@ -84,6 +88,6 @@ const UserSchema = new mongoose.Schema({
 
 // Indexes (Avoid duplicates)
 UserSchema.index({ 'socialAuth.googleId': 1 });
-UserSchema.index({ 'socialAuth.facebookId': 1 });
+
 
 module.exports = mongoose.model('User', UserSchema);    
