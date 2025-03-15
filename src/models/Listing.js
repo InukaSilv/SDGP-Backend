@@ -1,28 +1,5 @@
 const mongoose = require("mongoose");
 const { type } = require("os");
-
-const reviewSchema = new mongoose.Schema({
-  user: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true,
-  },
-  rating: {
-    type: Number,
-    required: true,
-    min: 1,
-    max: 5,
-  },
-  comment: {
-    type: String,
-    required: true,
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now,
-  },
-});
-
 const listingSchema = new mongoose.Schema({
   title: {
     type: String,
@@ -93,7 +70,22 @@ const listingSchema = new mongoose.Schema({
     min: 0,
     max: 5,
   },
-  reviews: [reviewSchema], // Array of review objects
+  totalRatingCount:{
+    type:Number,
+    default:0,
+    min:0
+  },
+  starsCount: {
+    type: Map,
+    of: Number,
+    default: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  },
+  reviews: [
+          {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Reviews",
+          },
+        ], // Array of review objects
 }, { timestamps: true });
 
 // Calculate average rating before saving

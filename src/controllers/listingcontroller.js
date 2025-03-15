@@ -1,5 +1,7 @@
 const { deleteImage } = require("../config/azureStorage");
 const Listing = require("../models/Listing");
+const EligibleUser = require("../models/EligibleUser");
+const Review = require("../models/Reviews")
 const User = require("../models/User");
 const {Server} = require("socket.io");
 let io;
@@ -173,7 +175,6 @@ const getListing = async(req,res) =>{
     },
   },
 });
-console.log(ads);
 res.status(200).json(ads);
   }catch(error){
     console.error("Error fetching ads: ",error);
@@ -181,6 +182,55 @@ res.status(200).json(ads);
   }
 }
 
+// landlords can add students to make it possible to write reveiws
+const addEligibleUser = async (req, res) => {
+  try {
+    const { adId, email } = req.body;
+    const found = await User.findOne({ email:email });
+
+    if (!found) {
+      return res.status(404).json({ error: "User not found" });
+    }
+    if (found.role === "Landlord") {
+      return res.status(400).json({ error: "Landlords cannot be eligible users" });
+    }
+    const check = await EligibleUser.findOne({ property: adId, userId: found._id });
+
+    if (check) {
+      return res.status(400).json({ error: "Student already added" });
+    }
+    const record = new EligibleUser({
+      property: adId,
+      userId: found._id,
+    });
+    await record.save();
+    console.log("Saved successfully");
+    return res.status(201).json({ message: "Eligible user added successfully" });
+  } catch (error) {
+    console.error("Error adding eligible user: ", error);
+    return res.status(500).json({ error: "Server Error" });
+  }
+};
+
+// retreive the properties of the students who are eligible to reveiw
+const checkRevieweElig = async (req, res, next) => {
+  try {
+    const eligibleRecords = await EligibleUser.find({ userId: req.user._id });
+    if (eligibleRecords.length === 0) {
+      return res.status(404).json({ error: "No eligible reviews found" });
+    }
+    const propertyIds = eligibleRecords.map((record) => record.property);
+    const propertyDetails = await Listing.find({ _id: propertyIds });
+    if (propertyDetails.length === 0) {
+      return res.status(404).json({ error: "No property details found" });
+    }
+    console.log(propertyDetails);
+    res.status(200).json({ properties: propertyDetails });
+  } catch (error) {
+    console.error("Error checking review eligibility: ", error);
+    res.status(500).json({ error: "Server Error" });
+  }
+};
 
 
 
@@ -302,45 +352,12 @@ res.status(200).json({ message: "Listing updated successfully", property });
   }
 }
 
-// @desc    Add a review to a listing
-// @route   POST /api/listings/:id/reviews
-// @access  Private
-const addReview = async (req, res, next) => {
-  const { rating, comment } = req.body;
-
-  if (!rating || !comment) {
-    return res.status(400).json({ message: "Please fill all required fields" });
-  }
-
-  try {
-    const listing = await Listing.findById(req.params.id);
-
-    if (!listing) {
-      return res.status(404).json({ message: "Listing not found" });
-    }
-
-    // Add the new review
-    const newReview = {
-      user: req.user._id,
-      rating,
-      comment,
-    };
-
-    listing.reviews.push(newReview);
-    await listing.save();
-
-    res.status(201).json({ message: "Review added successfully" });
-  } catch (err) {
-    next(err);
-  }
-};
 
 // @desc    Delete a listing
 // @route   DELETE /api/listings/:id
 // @access  Private (landlords only)
 const deleteListing = async (req, res, next) => {
   try{
-    console.log("came to delete");
     const listing = await Listing.findById(req.body.propertyId);
 
     if (!listing) {
@@ -349,14 +366,51 @@ const deleteListing = async (req, res, next) => {
     for(const img of listing.images){
       await deleteImage(img);
     }
+
+    for (const reviewId of listing.reviews) {
+      await Review.findByIdAndDelete(reviewId);
+    }
+    await EligibleUser.deleteMany({ property: listing._id });
     await listing.deleteOne();
     res.status(200).json({ message: "Listing deleted successfully" });
   }catch(err){
     next(err);
   }
-
-
   };
+
+  const addReview = async(req,res,next) =>{
+    try{
+      const { rating, review, recommend, propertyId } = req.body;
+      const newReview = new Review({
+        rating,
+        review,
+        recommend,
+        property: propertyId, 
+        user: req.user.id, 
+      });
+      await newReview.save();
+
+      const property = await Listing.findById(propertyId);
+      const starsCount = new Map(property.starsCount);
+      console.log(starsCount);
+      starsCount.set(String(rating),(starsCount.get(String(rating))||0)+1);
+      const totalRatingCount = (property.totalRatingCount || 0)+rating;
+      const totalRevews = property.reviews.length + 1;
+      const averageRating = totalRatingCount/totalRevews;
+
+      await Listing.findByIdAndUpdate(propertyId, {
+        $push: { reviews: newReview._id},
+        $set:{
+          totalRatingCount,
+          averageRating,
+          starsCount:Object.fromEntries(starsCount),
+        }
+      });
+      res.status(200).json({message:"Review added successfully"});
+    }catch(err){
+      next(err);
+    }
+  }
     // if (!listing) {
     //   return res.status(404).json({ message: "Listing not found" });
     // }
@@ -402,6 +456,69 @@ const updateListingImages = async (req, res, next) => {
   }
 };
 
+
+const getOwner = async (req, res, next) => {
+  try {
+    const { propertyId } = req.query;
+    const prop = await Listing.findOne({ _id: propertyId });
+    const landlord = await User.findOne({ _id: prop.landlord });
+    res.json(landlord);
+  } catch (error) {
+    console.error("Error fetching owner details:", error);
+    res.status(500).json({ message: "Internal server error." });
+  }
+};
+
+const getReviews = async (req, res, next) => {
+  try {
+    const { reviews, id } = req.query;
+    const property = await Listing.findById(id);
+    if (!property) {
+      return res.status(404).json({ message: "Property not found" });
+    }
+
+    const reviewIds = reviews.split(",");
+    let sendreviews = [];
+    for (const reviewId of reviewIds) {
+      const review = await Review.findById(reviewId);
+      if (review) {
+        const user = await User.findById(review.user);
+        if (user) {
+          const record = {
+            rating: review.rating,
+            review: review.review,
+            createdAt: review.createdAt,
+            firstName: user.firstName,
+            lastName: user.lastName
+          };
+          sendreviews.push(record);
+        }
+      }
+    }
+
+    // Find similar properties based on housing type and price range
+    const similarProperties = await Listing.find({
+      housingType: property.housingType,
+      price: { $gte: property.price - 50000, $lte: property.price + 50000 }, // Find properties with price range ±500
+      _id: { $ne: property._id }, // Exclude the current property
+    })
+    .limit(2); // Get only 2 similar properties
+
+    console.log(similarProperties)
+    // Send the response with reviews and similar properties
+    res.status(200).json({
+      reviews: sendreviews,
+      similarProperties: similarProperties
+    });
+  } catch (error) {
+    console.error("Error fetching reviews and similar properties:", error);
+    res.status(500).json({ message: "Server Error" });
+  }
+};
+
+
+
+
 module.exports = {
   getAllListings,
   createListing,
@@ -413,5 +530,9 @@ module.exports = {
   searchPersonalListing,
   addslots,
   initializeSocket,
-  getListing
+  getListing,
+ addEligibleUser,
+ checkRevieweElig,
+ getOwner,
+ getReviews,
 };

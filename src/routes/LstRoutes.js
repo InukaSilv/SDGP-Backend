@@ -1,5 +1,5 @@
 const express = require("express");
-const { createListing, searchPersonalListing, addslots, getListing, updateListing,deleteListing } = require("../controllers/listingcontroller");
+const { createListing, searchPersonalListing, addslots, getListing, updateListing,deleteListing,addEligibleUser,checkRevieweElig, addReview,getOwner,getReviews } = require("../controllers/listingcontroller");
 const multer = require("multer");
 const { uploadImage,deleteImage } = require("../config/azureStorage");
 const { protect } = require("../middlewares/authMiddleware");
@@ -78,10 +78,31 @@ router.put("/update-listing", protect, upload.array("images", 6), async (req, re
     }
 });
 
-
+// delete a post
 router.delete("/delete-post", protect, async(req,res,next)=>{
 deleteListing(req,res);
 })
 
+// add student to the property so that the student can add reviews
+router.post("/add-student-property" , protect , async(req,res,next) =>{
+    addEligibleUser(req,res);
+})
 
+// get the properties which a student can reveiew
+router.get("/check-reviews",protect,async(req,res,next) => {
+    checkRevieweElig(req,res,next);
+})
+
+// add review
+router.post("/post-review",protect,async(req, res, next) =>{
+    addReview(req,res,next);
+})
+
+router.get("/getowner",async(req,res,next) =>{
+    getOwner(req,res,next);
+})
+
+router.get("/get-reviews", async(req,res,next)=>{
+    getReviews(req,res,next);
+})
 module.exports = router;
