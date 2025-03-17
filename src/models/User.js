@@ -59,9 +59,9 @@ const UserSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
-    isPhoneVerified: {
+    phoneVerified: {
         type: Boolean,
-        default: false
+        default: false,
     },
     isIdVerified: {
         type: Boolean,

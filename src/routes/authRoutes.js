@@ -7,6 +7,7 @@ const { protect } = require("../middlewares/authMiddleware");
 const { updateUserProfile,verifyPhone } = require('../controllers/usercontroller');
 
 
+
 // Local authentication
 router.post('/signup', validateSignup, signup);
 router.post('/login', validateLogin, login);
@@ -15,9 +16,19 @@ router.put("/update-user", async (req, res, next) => {
     updateUserProfile(req, res, next);
 });
 
+// @desc    Send verification code
+// @route   GET /api/auth/verifyPhone
+// @access  Public
 router.get("/verifyPhone", async (req, res, next) => {
-    console.log("came to verify phone")
+    console.log("came to verify phone");
     verifyPhone(req, res, next);
+});
+
+// @desc    Verify the code
+// @route   POST /api/auth/verifyCode
+// @access  Public
+router.post("/verifyCode", async (req, res, next) => {
+    verifyCodeController(req, res, next);
 });
 
 // Google authentication
