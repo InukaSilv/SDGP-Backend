@@ -15,6 +15,7 @@ router.put("/update-user", async (req, res, next) => {
     updateUserProfile(req, res, next);
 });
 
+
 router.get("/verifyPhone", async (req, res, next) => {
     console.log("came to verify phone")
     verifyPhone(req, res, next);

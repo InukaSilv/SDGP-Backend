@@ -1,5 +1,5 @@
 const express = require("express");
-const { createListing, searchPersonalListing, addslots, getListing, updateListing,deleteListing,addEligibleUser,checkRevieweElig, addReview,getOwner,getReviews } = require("../controllers/listingcontroller");
+const { createListing, searchPersonalListing, addslots, getListing, updateListing,deleteListing,addEligibleUser,checkRevieweElig, addReview,getOwner,getReviews,uploadDp } = require("../controllers/listingcontroller");
 const multer = require("multer");
 const { uploadImage,deleteImage } = require("../config/azureStorage");
 const { protect } = require("../middlewares/authMiddleware");
@@ -105,4 +105,23 @@ router.get("/getowner",async(req,res,next) =>{
 router.get("/get-reviews", async(req,res,next)=>{
     getReviews(req,res,next);
 })
+
+router.put("/uploadDp",upload.single("image"),async(req,res,next) =>{
+    try {
+      if (!req.file) {
+        return res.status(400).send({ message: "No file uploaded." });
+      }
+  
+      const file = req.file;
+      const url = await uploadImage(file); 
+      console.log("Image upload success:", url);
+      req.img=url;
+      uploadDp(req,res,next);
+    } catch (error) {
+      console.error("Error uploading profile photo:", error);
+      res.status(500).send({ message: "Server error." });
+    }
+   
+})
+
 module.exports = router;

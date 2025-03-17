@@ -3,6 +3,8 @@ const User = require('../models/User');
 const { generateToken } = require('../utils/jwUtils');
 const admin = require('../config/firebaseAdmin'); // Firebase Admin SDK
 const { getAuth } = require("firebase-admin/auth");
+const { uploadImage } = require('../config/azureStorage');
+
 
 /**
  * Verify Firebase ID token (Only during signup)
@@ -146,3 +148,7 @@ exports.socialAuth = async (profile, provider) => {
         throw new Error(`Social authentication failed: ${error.message}`);
     }
 };
+
+
+
+  

@@ -2,7 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const authRoutes = require('./routes/authRoutes');
-const LstRoutes = require('./routes/LstRoutes')
+const LstRoutes = require('./routes/LstRoutes');
+const adminAuthRoute = require("./routes/adminAuth");
 const admin = require('./config/firebaseAdmin'); 
 const cors = require('cors');
 const http = require("http");
@@ -28,6 +29,7 @@ mongoose.connect(process.env.MONGO_URI, {
 // Authentication Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/listing',LstRoutes )
+app.use("/api/admin", adminAuthRoute);
 
 // Global error handler
 app.use((err, req, res, next) => {

@@ -527,6 +527,16 @@ const getReviews = async (req, res, next) => {
   }
 };
 
+const uploadDp = async (req, res, next) => {
+  const user = await User.findById(req.body.user); 
+  if (!user) {
+    return res.status(404).send({ message: "User not found." });
+  }
+
+  user.profilePhoto = req.img;
+  await user.save(); // Save the updated user
+  res.status(200).send({ message: "Profile photo updated successfully." });
+};
 
 
 
@@ -546,4 +556,5 @@ module.exports = {
  checkRevieweElig,
  getOwner,
  getReviews,
+ uploadDp,
 };

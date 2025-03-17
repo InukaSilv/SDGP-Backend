@@ -67,6 +67,10 @@ const UserSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    profilePhoto:{
+        type: String,
+        default:""
+    },
     verificationToken: String,
     verificationTokenExpires: Date,
     passwordResetToken: String,
