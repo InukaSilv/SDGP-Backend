@@ -75,6 +75,11 @@ const listingSchema = new mongoose.Schema({
     default:0,
     min:0
   },
+  views:{
+    type:Number,
+    default:0,
+    min:0
+  },
   starsCount: {
     type: Map,
     of: Number,

@@ -63,6 +63,10 @@ const UserSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    isIdVerified: {
+        type: Boolean,
+        default: false
+    },
     verificationToken: String,
     verificationTokenExpires: Date,
     passwordResetToken: String,
