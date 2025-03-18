@@ -44,6 +44,9 @@ app.use((err, req, res, next) => {
 
 // Start the HTTP server (not app.listen())
 const PORT = process.env.PORT || 5001;
-server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 
-module.exports = app; // exporting express app for testing
+if (process.env.NODE_ENV !== "test") {
+  server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+}
+
+module.exports = { app, server }; // exporting express app for testing
