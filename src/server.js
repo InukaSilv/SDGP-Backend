@@ -26,6 +26,11 @@ mongoose.connect(process.env.MONGO_URI, {
 }).then(() => console.log("MongoDB Connected"))
 .catch(err => console.error("MongoDB Connection Error:", err));
 
+// Health check endpoint
+app.get("/api/health-check", (req, res) => {
+    res.status(200).json({ message: "Server is healthy" });
+  });
+
 // Authentication Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/listing',LstRoutes )
@@ -40,3 +45,5 @@ app.use((err, req, res, next) => {
 // Start the HTTP server (not app.listen())
 const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+module.exports = app; // exporting express app for testing

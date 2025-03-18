@@ -1,17 +1,19 @@
 const request = require("supertest");
-const app = require("../src/server"); 
+const app = require("../src/server"); // Import the Express app
+const mongoose = require("mongoose"); // Import mongoose
 
 describe("Server Tests", () => {
   let server;
 
   // Start the server before tests
-  beforeAll(() => {
-    server = app.listen(5001); // Use a different port for testing
+  beforeAll((done) => {
+    server = app.listen(5001, done); // Use a different port for testing
   });
 
-  // Stop the server after tests
-  afterAll((done) => {
-    server.close(done);
+  // Stop the server and close MongoDB connection after tests
+  afterAll(async () => {
+    await mongoose.connection.close(); // Close MongoDB connection
+    server.close(); // Close the server
   });
 
   test("GET /api/health-check should return 200", async () => {
