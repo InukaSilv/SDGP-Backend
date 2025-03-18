@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const { sendVerificationCode } = require("../utils/twilio");
+const { sendVerificationCode } = require("../utils/twillio");
 
 // @desc    Get user profile
 // @route   GET /api/users/profile
