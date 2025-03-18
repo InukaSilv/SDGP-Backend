@@ -3,12 +3,23 @@ const router = express.Router();
 const passport = require('passport');
 const { signup, login, socialAuth,checkForForget } = require('../controllers/authcontroller');
 const { validateSignup, validateLogin } = require('../validators/authValidators');
+const { protect } = require("../middlewares/authMiddleware");
+const { updateUserProfile,verifyPhone } = require('../controllers/usercontroller');
 
 
 // Local authentication
 router.post('/signup', validateSignup, signup);
 router.post('/login', validateLogin, login);
 router.post('/checkforforget',checkForForget);
+router.put("/update-user", async (req, res, next) => {
+    updateUserProfile(req, res, next);
+});
+
+
+router.get("/verifyPhone", async (req, res, next) => {
+    console.log("came to verify phone")
+    verifyPhone(req, res, next);
+});
 
 // Google authentication
 router.get('/google', passport.authenticate('google', {

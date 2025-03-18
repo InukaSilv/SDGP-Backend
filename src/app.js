@@ -4,7 +4,7 @@ const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 
-// Load environment variables (adjust the path if .env is in the project root)
+// Load environment variables 
 dotenv.config({ path: '../.env' });
 
 // Connect to the database
@@ -18,6 +18,8 @@ app.use(express.json());
 
 // Routes 
 app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/listing", require("./routes/LstRoutes"));
+app.use("/api/wishlist", require("./routes/wishlistRoutes"));
 // app.use("/api/users", require("./routes/userRoutes"));
 // app.use("/api/listings", require("./routes/listingRoutes"));
 // app.use("/api/payments", require("./routes/paymentRoutes"));

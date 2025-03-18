@@ -35,11 +35,28 @@ const UserSchema = new mongoose.Schema({
         required: [true, 'Role is required'],
         default: 'Student'
     },
+    ads: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Listing",
+        },
+    ],
+    wishlist: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Wishlist",
+    }],
     registerType: {
         type: String,
         enum:['password','google'],
         requried:[true,'Registration type is required'],
         default:'password'
+    },
+    paymentType: {
+        type: String,
+        enum:['monthly','yearly','none'],
+        requried:[true,'Payment type is required'],
+        default:'none',
+        trim: true
     },
     isPremium: {
         type: Boolean,
@@ -52,6 +69,14 @@ const UserSchema = new mongoose.Schema({
     isPhoneVerified: {
         type: Boolean,
         default: false
+    },
+    isIdVerified: {
+        type: Boolean,
+        default: false
+    },
+    profilePhoto:{
+        type: String,
+        default:""
     },
     verificationToken: String,
     verificationTokenExpires: Date,
@@ -78,6 +103,6 @@ const UserSchema = new mongoose.Schema({
 
 // Indexes (Avoid duplicates)
 UserSchema.index({ 'socialAuth.googleId': 1 });
-UserSchema.index({ 'socialAuth.facebookId': 1 });
+
 
 module.exports = mongoose.model('User', UserSchema);    

@@ -3,6 +3,8 @@ const User = require('../models/User');
 const { generateToken } = require('../utils/jwUtils');
 const admin = require('../config/firebaseAdmin'); // Firebase Admin SDK
 const { getAuth } = require("firebase-admin/auth");
+const { uploadImage } = require('../config/azureStorage');
+
 
 /**
  * Verify Firebase ID token (Only during signup)
@@ -22,7 +24,7 @@ const verifyFirebaseToken = async (idToken) => {
  */
 exports.signup = async (req, res, next) => {
     try {
-        const {  fname, lname, email, phone, dob, registerType , isPremium, idToken, role } = req.body;
+        const {  fname, lname, email, phone, dob, registerType, paymentType , isPremium, idToken, role } = req.body;
 
         // Verify Firebase token
         const decodedToken = await verifyFirebaseToken(idToken);
@@ -38,7 +40,7 @@ exports.signup = async (req, res, next) => {
             return res.status(400).json({ success: false, message: 'User already exists' });
         }
 
-
+        console.log(paymentType);
         const newUser = new User({
             firstName: fname,
             lastName: lname,
@@ -46,6 +48,7 @@ exports.signup = async (req, res, next) => {
             phone,
             dob,
             registerType,
+            paymentType:paymentType,
             isPremium,
             isEmailVerified: true,
             role
@@ -59,7 +62,7 @@ exports.signup = async (req, res, next) => {
         res.status(201).json({ success: true, message: 'User registered successfully', token, user: newUser });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ success: false, message: 'Signup failed yakoo' });
+        res.status(500).json({ success: false, message: 'Signup failed' });
     }
 };
 
@@ -146,3 +149,7 @@ exports.socialAuth = async (profile, provider) => {
         throw new Error(`Social authentication failed: ${error.message}`);
     }
 };
+
+
+
+  
