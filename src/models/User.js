@@ -51,6 +51,13 @@ const UserSchema = new mongoose.Schema({
         requried:[true,'Registration type is required'],
         default:'password'
     },
+    paymentType: {
+        type: String,
+        enum:['monthly','yearly','none'],
+        requried:[true,'Payment type is required'],
+        default:'none',
+        trim: true
+    },
     isPremium: {
         type: Boolean,
         default: false
