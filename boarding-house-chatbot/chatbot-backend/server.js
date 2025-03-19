@@ -1,8 +1,7 @@
 const express = require("express");
-const mysql = require("mysql2/promise");
+const { MongoClient } = require("mongodb");
 const axios = require("axios");
 const cors = require("cors");
-const dbConfig = require('./config/db.config');
 require('dotenv').config();
 
 const app = express();
@@ -10,69 +9,83 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-//Create connection
-const pool = mysql.createPool(dbConfig);
+// MongoDB Connection URI
+const uri = process.env.MONGODB_URI;
+const client = new MongoClient(uri);
+let db;
 
-//Check database connection
-app.use(async (req, res, next) =>{
-    try{
-        const connection = await pool.getConnection();
-        await connection.release();
-        next();
-    } catch (error) {
-        console.error('Database connection failed:', error);
-        res.status(500).json({ error: 'Database connection failed'});
+// Connect to MongoDB
+async function connectToDatabase() {
+  try {
+    await client.connect();
+    console.log("Connected to MongoDB");
+    db = client.db(process.env.DB_NAME || "boarding_house_chatbot");
+    
+    // Create indexes if needed
+    await db.collection("chats").createIndex({ conversation_id: 1 });
+    
+    return true;
+  } catch (error) {
+    console.error("Error connecting to MongoDB:", error);
+    return false;
+  }
+}
+
+// Middleware to ensure database connection
+app.use(async (req, res, next) => {
+  if (!db) {
+    const connected = await connectToDatabase();
+    if (!connected) {
+      return res.status(500).json({ error: 'Database connection failed' });
     }
+  }
+  next();
 });
 
-//Route to handle chat messages
+// Route to handle chat messages
 app.post('/api/chat', async (req, res) => {
-    const { userId, message, conversationId } = req.body; 
+  console.log("Received chat request:", req.body);
+  const { userId, message, conversationId } = req.body;
 
-    if (!userId || !message || !conversationId) {
-        return res.status(400).json({ error: 'Missing required fields' });
-    }
+  if (!userId || !message || !conversationId) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
 
-    try{
-        //Forward request to AI service
-        const aiResponse = await axios.post(`${process.env.AI_SERVICE_URL}/chat`,{
-            user_id: userId,
-            message: message,
-            conversation_id: conversationId
-        });
+  try {
+    // Forward request to AI service
+    console.log(`Forwarding to AI service at ${process.env.AI_SERVICE_URL}/chat`);
+    const aiResponse = await axios.post(`${process.env.AI_SERVICE_URL}/chat`, {
+      user_id: userId,
+      message: message,
+      conversation_id: conversationId
+    });
 
-        res.json(aiResponse.data);
-    } catch (error) {
-        console.error('Error processing chat:', error);
-        res.status(500).json({
-            error: 'Error processing message',
-            details: error.response?.data || error.message
-        });
-    }
-});
+    console.log("AI service response:", aiResponse.data);
 
-//Route to get chat hostory
-app.get('/api/chat-history/:conversationId', async (req, res) => {
-    const { conversationId } = req.params;
-
-    try {
-        const [rows] = await pool.execute(
-            'SELECT * FROM chats WHERE conversation_id = ? ORDER BY timestamp ASC',
-            [conversationId]
-        );
-        res.json(rows);
-    } catch (error) {
-        console.error('Error fetching chat hostory: ', error);
-        res.status(500).json({ error: 'Error fatching chat hostory'});
-    }
+    // Send response back to client
+    res.json(aiResponse.data);
+  } catch (error) {
+    console.error('Error processing chat:', error);
+    res.status(500).json({
+      error: 'Error processing message',
+      details: error.response?.data || error.message
+    });
+  }
 });
 
 // Health check endpoint
 app.get('/health', (req, res) => {
-    res.json({ status: 'OK', timestamp: new Date() });
+  res.json({ status: 'OK', timestamp: new Date() });
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
+});
+
+// Handle application shutdown
+process.on('SIGINT', async () => {
+  console.log('Closing MongoDB connection');
+  await client.close();
+  process.exit(0);
 });
