@@ -1,4 +1,4 @@
-# Use the official Node.js image as the base image
+# Use the official Node.js image 
 FROM node:18
 
 # Set the working directory inside the container
@@ -13,11 +13,11 @@ ENV NODE_ENV=production
 # Install dependencies
 RUN npm ci --only=production
 
-# Copy the rest of the application code
+# Copy the application code
 COPY . .
 
-# Expose the port your app runs on
+# Expose the port app runs on
 EXPOSE 5001
 
-# Command to run your application
+# Command to run application
 CMD ["node", "src/server.js"]

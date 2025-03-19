@@ -1,4 +1,4 @@
-name: Node.js CI/CD
+name: Node.js CI
 
 on:
   push:
@@ -7,8 +7,8 @@ on:
     branches: [main] # Trigger on pull requests to the main branch
 
 jobs:
-  build:
-    runs-on: ubuntu-latest # Use Ubuntu for better compatibility with Docker
+  test:
+    runs-on: ubuntu-latest
 
     steps:
       # Step 1: Check out the repository
@@ -19,38 +19,21 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v2
         with:
-          node-version: "18" # Use Node.js version 18 (or your preferred version)
+          node-version: "18"
 
-      # Step 3: Install dependencies
+      # Step 3: Cache Node.js modules
+      - name: Cache Node.js modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: node-modules-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            node-modules-${{ runner.os }}-
+
+      # Step 4: Install dependencies
       - name: Install dependencies
         run: npm install
 
-      # Step 4: Run tests
+      # Step 5: Run tests
       - name: Run tests
         run: npm test
-
-      # Step 5: Set up Google Cloud SDK
-      - name: Set up Google Cloud SDK
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
-
-      # Step 6: Configure Docker to use Google Artifact Registry
-      - name: Configure Docker
-        run: gcloud auth configure-docker us-central1-docker.pkg.dev
-
-      # Step 7: Build and push Docker image
-      - name: Build and push Docker image
-        run: |
-          IMAGE_NAME=us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/rivve-backend/rivve-backend
-          docker build -t $IMAGE_NAME .
-          docker push $IMAGE_NAME
-
-      # Step 8: Deploy to Cloud Run
-      - name: Deploy to Cloud Run
-        run: |
-          gcloud run deploy rivve-backend \
-            --image=us-central1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/rivve-backend/rivve-backend \
-            --platform=managed \
-            --region=us-central1 \
-            --allow-unauthenticated
