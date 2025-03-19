@@ -74,6 +74,13 @@ const UserSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    IdVerificationStatus:{
+        type: String,
+        enum:['Pending','NotSubmitted',"Verified"],
+        requried:[true,'Payment type is required'],
+        default:'NotSubmitted',
+        trim: true
+    },
     profilePhoto:{
         type: String,
         default:""

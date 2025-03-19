@@ -18,7 +18,7 @@ const listingSchema = new mongoose.Schema({
     coordinates: { type: [Number], required: true },
   },
   images: {
-    type: [String], // Array of image URLs
+    type: [String], 
   },
   price: {
     type: Number,

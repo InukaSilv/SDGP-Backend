@@ -2,6 +2,7 @@ const Listing = require("../models/Listing");
 const EligibleUser = require("../models/EligibleUser");
 const Review = require("../models/Reviews")
 const User = require("../models/User");
+const toReview = require("../models/ToReview");
 
 
 const getData = async (req, res, next) => {
@@ -9,10 +10,14 @@ const getData = async (req, res, next) => {
 const userCount = await User.countDocuments();
 const studentCount = await User.countDocuments({role:"Student"});
 const LandlordCount = await User.countDocuments({role:"Landlord"});
+const adCount = await Listing.countDocuments();
+const llToReview = await toReview.countDocuments();
 res.status(200).json({ 
     totalUsers: userCount,
     studentUsers: studentCount,
     Landlords:LandlordCount,
+    ads:adCount,
+    toReview:llToReview,
 });
 
     }catch(error){
@@ -42,9 +47,21 @@ const deleteUser = async (req, res, next) =>{
 
 }
 
+const getAdsData = async (req,res,next) =>{
+    try{
+const Ads = await Listing.find();
+console.log(Ads);
+res.status(200).json({Ads});
+    }catch(error){
+        console.error("Error fetching Ads:", error);
+        res.status(500).json({ message: "Error retrieving Ads", error: error.message });
+    }
+}
+
 
 module.exports = {
 getData,
 getUserData,
 deleteUser,
+getAdsData,
 };

@@ -3,7 +3,7 @@ const router = express.Router();
 const { generateToken } = require('../utils/jwUtils');
 const ADMIN_USERNAME = process.env.ADMIN_USERNAME;
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
-const {getData,getUserData,deleteUser} = require("../controllers/admincontroller");
+const {getData,getUserData,deleteUser,getAdsData} = require("../controllers/admincontroller");
 
 router.post("/login", async (req, res) => {
     const { username, password } = req.body;
@@ -27,6 +27,11 @@ router.get("/get-User-Data",async(req,res)=>{
 
 router.delete("/delete-user",async(req,res)=>{
   deleteUser(req,res);
+})
+
+router.get("/get-Ads-Data",async(req,res)=>{
+  console.log("came to this");
+  getAdsData(req,res);
 })
 
 module.exports = router;

@@ -1,10 +1,21 @@
 const express = require('express');
 const router = express.Router();
 const passport = require('passport');
-const { signup, login, socialAuth,checkForForget } = require('../controllers/authcontroller');
+const { signup, login, socialAuth,checkForForget,uploadId } = require('../controllers/authcontroller');
 const { validateSignup, validateLogin } = require('../validators/authValidators');
 const { protect } = require("../middlewares/authMiddleware");
-const { updateUserProfile,verifyPhone } = require('../controllers/usercontroller');
+const { updateUserProfile,updatePayment } = require('../controllers/usercontroller');
+const { uploadImage,deleteImage } = require("../config/azureStorage");
+const multer = require("multer");
+
+const storage = multer.memoryStorage();
+const upload = multer({
+    storage,
+    limits:{
+        fileSize:5*1024*1024,
+        files:10
+    }
+})
 
 
 // Local authentication
@@ -15,11 +26,28 @@ router.put("/update-user", async (req, res, next) => {
     updateUserProfile(req, res, next);
 });
 
+router.put("/updatepayment",async(req,res,next)=>{
+    updatePayment(req,res,next);
+})
 
-router.get("/verifyPhone", async (req, res, next) => {
-    console.log("came to verify phone")
-    verifyPhone(req, res, next);
-});
+router.post('/uploadId',upload.array("images",2), async(req,res ,next)=>{
+    try{
+        if(!req.files || req.files.length === 0){
+            return res.status(400).send({message:"No file uploaded."});
+        }
+        const imageUrls = [];
+        for(const file of req.files){
+            const url = await uploadImage(file);
+            imageUrls.push(url);
+        }
+        req.imageUrls = imageUrls;
+        uploadId(req, res, next);
+    }catch(err){
+        next(err);
+    }
+})
+
+
 
 // Google authentication
 router.get('/google', passport.authenticate('google', {

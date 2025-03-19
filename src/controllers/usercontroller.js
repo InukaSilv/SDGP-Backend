@@ -20,7 +20,6 @@ const getUserProfile = async (req, res, next) => {
 // @route   PUT /api/users/profile
 // @access  Private
 const updateUserProfile = async (req, res, next) => {
-    console.log("Request body:", req.body); 
     const { userId, firstName, lastName, phone } = req.body;
     console.log(firstName);
     try {
@@ -36,7 +35,7 @@ const updateUserProfile = async (req, res, next) => {
         }
         
         console.log(updatedUser);
-        res.status(200).json(updatedUser);
+        res.status(200).send(updatedUser);
 
     } catch (err) {
         next(err);
@@ -44,13 +43,24 @@ const updateUserProfile = async (req, res, next) => {
     }
 };
 
-const verifyPhone = async (req,res,next) =>{
-    const {phone} = req.query;
-    console.log(phone)
+
+const updatePayment = async(req,res,next) =>{
+const {action,userId} = req.body;
+if (!action || !userId) {
+    return res.status(400).json({ message: "Action and userId are required" });
+  }
+  const user = await User.findByIdAndUpdate(
+    userId,
+    { paymentType: action },
+    { new: true } 
+  );
+  res.status(200).json({ message: "Payment updated successfully", user });
 }
+
 
 module.exports = {
     getUserProfile,
     updateUserProfile,
-    verifyPhone
+    updatePayment,
+   
 };

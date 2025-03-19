@@ -535,7 +535,7 @@ const uploadDp = async (req, res, next) => {
 
   user.profilePhoto = req.img;
   await user.save(); // Save the updated user
-  res.status(200).send({ message: "Profile photo updated successfully." });
+  res.status(200).send({ message: "Profile photo updated successfully.",user });
 };
 
 
