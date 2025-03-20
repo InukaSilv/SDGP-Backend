@@ -1,3 +1,20 @@
+<<<<<<< HEAD
+const express = require("express");
+const router = express.Router();
+const { createCheckoutSession, handleWebhook, getPaymentHistory } = require("../controllers/paymentcontroller");
+const { protect } = require("../middlewares/authMiddleware");
+
+// Route to create a Stripe payment intent
+router.post("/create-checkout-session", protect, createCheckoutSession);
+
+//Route to handle Stripe webhook events
+router.post("/webhook",handleWebhook);
+
+// Route to get payment history
+router.get("/history", protect, getPaymentHistory);
+
+module.exports = router;
+=======
 const express = require('express');
 const router = express.Router();
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
@@ -70,3 +87,4 @@ router.get('/history', protect, async (req, res) => {
 });
 
 module.exports = router;
+>>>>>>> main
