@@ -5,7 +5,7 @@ import styled from "styled-components";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { loginRoute } from "../utils/APIRoutes";
-import Logo from "../assests/logo.png";
+import Logo from "../assests/logo1.png";
 
 export default function Login() {
   const navigate = useNavigate();

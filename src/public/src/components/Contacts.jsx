@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import styled from "styled-components";
-import Logo from "../assests/logo.png";
+import Logo from "../assests/logo1.png";
 
 export default function Contacts({ contacts, currentUser, changeChat }) {
   const [currentUserName, setCurrentUserName] = useState(undefined);
@@ -83,13 +83,11 @@ const Container = styled.div`
     border-bottom: 1px solid #ffffff16;
     
     img {
-      height: 2.5rem;
+      height: 3rem;
       max-width: 100%;
       transition: transform 0.3s ease;
       
-      &:hover {
-        transform: scale(1.1);
-      }
+      
     }
     
     h2 {
