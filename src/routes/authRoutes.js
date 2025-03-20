@@ -1,17 +1,13 @@
 const express = require('express');
 const router = express.Router();
-<<<<<<< HEAD
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
-const { protect } = require('../middlewares/authMiddleware');
-=======
 const passport = require('passport');
 const { signup, login, socialAuth,checkForForget } = require('../controllers/authcontroller');
 const { validateSignup, validateLogin } = require('../validators/authValidators');
 const { protect } = require("../middlewares/authMiddleware");
 const { updateUserProfile,verifyPhone } = require('../controllers/usercontroller');
->>>>>>> main
 
 
 // Local authentication
