@@ -1,10 +1,14 @@
+
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
 
-dotenv.config(); // Load environment variables
-connectDB(); // Connect to the database
+// Load environment variables 
+dotenv.config({ path: '../.env' });
+
+// Connect to the database
+connectDB();
 
 const paymentRoutes = require("./routes/paymentRoutes");
 const app = express();
@@ -15,11 +19,21 @@ app.use("/api/payments/webhook", express.raw({ type: "application/json" }));
 app.use(express.json());
 app.use(cors());
 
+<<<<<<< HEAD
 // Routes
 app.use("/api/payments", paymentRoutes);
+=======
+// Routes 
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/listing", require("./routes/LstRoutes"));
+app.use("/api/wishlist", require("./routes/wishlistRoutes"));
+// app.use("/api/users", require("./routes/userRoutes"));
+// app.use("/api/listings", require("./routes/listingRoutes"));
+// app.use("/api/payments", require("./routes/paymentRoutes"));
+>>>>>>> main
 
-// Error handling middleware
-const { errorHandler } = require("./middlewares/errorHandler");
-app.use(errorHandler);
+// Error handling middleware (if you have one)
+// const { errorHandler } = require("./middlewares/errorHandler");
+// app.use(errorHandler);
 
 module.exports = app;

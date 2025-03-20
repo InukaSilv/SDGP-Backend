@@ -20,30 +20,37 @@ const getUserProfile = async (req, res, next) => {
 // @route   PUT /api/users/profile
 // @access  Private
 const updateUserProfile = async (req, res, next) => {
+    console.log("Request body:", req.body); 
+    const { userId, firstName, lastName, phone } = req.body;
+    console.log(firstName);
     try {
-        const user = await User.findById(req.user._id);
-        if (!user) {
-            return res.status(404).json({ message: 'User not found' });
-        }
+        const updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: { firstName, lastName, phone } },
+            { new: true }
+        );
 
-        user.name = req.body.name || user.name;
-        user.email = req.body.email || user.email;
-        if (req.body.password) {
-            user.password = await bcrypt.hash(req.body.password, 10);
-        }
 
-        const updatedUser = await user.save();
-        res.json({
-            id: updatedUser._id,
-            name: updatedUser.name,
-            email: updatedUser.email,
-        });
+        if (!updatedUser) {
+            return res.status(404).json({ error: "User not found" });
+        }
+        
+        console.log(updatedUser);
+        res.status(200).json(updatedUser);
+
     } catch (err) {
         next(err);
+        console.log(err);
     }
 };
+
+const verifyPhone = async (req,res,next) =>{
+    const {phone} = req.query;
+    console.log(phone)
+}
 
 module.exports = {
     getUserProfile,
     updateUserProfile,
+    verifyPhone
 };
