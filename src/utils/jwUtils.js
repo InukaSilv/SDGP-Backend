@@ -1,4 +1,3 @@
-
 const jwt = require('jsonwebtoken');
 
 const generateToken = (payload, expiresIn = process.env.JWT_EXPIRES_IN) => {

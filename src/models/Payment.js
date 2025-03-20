@@ -1,4 +1,3 @@
-// models/Payment.js
 const mongoose = require("mongoose");
 
 // Define the schema for storing payment details in MongoDB

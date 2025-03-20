@@ -1,5 +1,5 @@
 const User = require('../models/User');
-// const bcrypt = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 const { generateToken } = require('../utils/jwUtils');
 const admin = require('../config/firebaseAdmin'); // Firebase Admin SDK
 const { getAuth } = require("firebase-admin/auth");
