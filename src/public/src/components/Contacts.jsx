@@ -7,10 +7,13 @@ export default function Contacts({ contacts, currentUser, changeChat }) {
   const [currentSelected, setCurrentSelected] = useState(undefined);
 
   useEffect(() => {
-    
     if (currentUser) {
-      
-      setCurrentUserName(currentUser.username || currentUser.currentUserName);
+      // Use firstName and lastName if available, otherwise fall back to username
+      if (currentUser.firstName && currentUser.lastName) {
+        setCurrentUserName(`${currentUser.firstName} ${currentUser.lastName}`);
+      } else {
+        setCurrentUserName(currentUser.username || currentUser.currentUserName);
+      }
     }
   }, [currentUser]);
 
@@ -35,7 +38,12 @@ export default function Contacts({ contacts, currentUser, changeChat }) {
                 onClick={() => handleChangeCurrentChat(index, contact)}
               >
                 <div className="username">
-                  <h3>{contact.username}</h3>
+                  <h3>
+                    {contact.firstName && contact.lastName
+                      ? `${contact.firstName} ${contact.lastName}`
+                      : contact.username}
+                  </h3>
+                  <p className="role">{contact.role}</p>
                 </div>
               </div>
             ))}
@@ -43,6 +51,7 @@ export default function Contacts({ contacts, currentUser, changeChat }) {
           <div className="current-user">
             <div className="username">
               <h2>{currentUserName}</h2>
+              {currentUser && <p className="role">{currentUser.role}</p>}
             </div>
           </div>
         </Container>

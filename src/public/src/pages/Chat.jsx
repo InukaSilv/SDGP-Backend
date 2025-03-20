@@ -32,7 +32,7 @@ function Chat() {
       socket.current = io(host);
       socket.current.emit("add-user", currentUser._id);
     }
-  },[currentUser])
+  }, [currentUser]);
   
   useEffect(() => {
     const fetchContacts = async () => {
@@ -61,23 +61,20 @@ function Chat() {
         <Contacts 
           contacts={contacts} 
           currentUser={currentUser} 
-          changeChat={handleChatChange}
+          changeChat={handleChatChange} 
         />
-      
-        <div className="chat-container">
-          {currentChat ? (
-            <ChatContainer 
-              currentChat={currentChat} 
-              currentUser={currentUser} 
-              socket={socket}
-            />
-          ) : (
-            <div className="welcome">
-              <h1>Welcome to RiVVe Chat!</h1>
-              <h3>Select a chat to start messaging</h3>
-            </div>
-          )}
-        </div>
+        {currentChat ? (
+          <ChatContainer 
+            currentChat={currentChat} 
+            currentUser={currentUser} 
+            socket={socket} 
+          />
+        ) : (
+          <div className="welcome">
+            <h1>Welcome to RiVVe Chat!</h1>
+            <h3>Select a chat to start messaging</h3>
+          </div>
+        )}
       </div>
     </Container>
   );
@@ -98,27 +95,18 @@ const Container = styled.div`
     background-color: #00000076;
     display: grid;
     grid-template-columns: 25% 75%;
-    @media screen and (min-width:720px) and (max-width:1080px) {
-      grid-template-columns: 35% 65%;
-    }
-    @media screen and (min-width:360px) and (max-width:480px) {
+    @media screen and (min-width: 720px) and (max-width: 1080px) {
       grid-template-columns: 35% 65%;
     }
   }
-  .chat-container {
+  .welcome {
     display: flex;
     flex-direction: column;
-    justify-content: center;
     align-items: center;
+    justify-content: center;
     color: white;
-    height: 100%;
-    width: 100%;
-    .welcome {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100%;
+    h1 {
+      margin-bottom: 1rem;
     }
   }
 `;

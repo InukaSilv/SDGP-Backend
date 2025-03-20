@@ -1,8 +1,7 @@
 const mongoose = require("mongoose");
 
-
 const userSchema = new mongoose.Schema({
-    username:{
+    username: {
         type: String,
         require: true,
         min: 3,
@@ -20,14 +19,18 @@ const userSchema = new mongoose.Schema({
         require: true,
         min: 8,
     },
-    // isAvatarImageSet : {
-    //     type: Boolean,
-    //     default: false,
-    // },
-    // avatarImage: {
-    //     type: String,
-    //     default: "",
-    // },
+    role: {
+        type: String,
+        enum: ['Student', 'Landlord'],
+        required: true
+    },
+    firstName: String,
+    lastName: String,
+    phone: String,
+    dob: Date,
+    
+}, {
+    timestamps: true
 });
 
-module.exports = mongoose.model("Users", userSchema)
+module.exports = mongoose.model("Users", userSchema);
