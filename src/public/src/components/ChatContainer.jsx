@@ -5,7 +5,7 @@ import Picker from "emoji-picker-react";
 import axios from "axios";
 import { sendMessageRoute, getAllMessagesRoute } from "../utils/APIRoutes";
 
-export default function ChatContainer({ currentChat, currentUser, socket }) {
+export default function ChatContainer({ currentChat, currentUser, socket, draftMessage, onDraftMessageChange }) {
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -13,11 +13,28 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
   const inputRef = useRef();
   const chatMessagesRef = useRef();
   const [arrivalMessage, setArrivalMessage] = useState(null);
+  const [prevChatId, setPrevChatId] = useState(null);
 
+  useEffect(() => {
+    if (currentChat && currentChat._id !== prevChatId) {
+      setInputMessage(draftMessage || "");
+      setPrevChatId(currentChat._id);
+    }
+  }, [currentChat, draftMessage, prevChatId]);
+
+  // Save draft message when user types
+  useEffect(() => {
+    if (onDraftMessageChange && currentChat) {
+      onDraftMessageChange(inputMessage);
+    }
+  }, [inputMessage, currentChat, onDraftMessageChange]);
+
+  // Reset messages when chat changes
   useEffect(() => {
     setMessages([]);
   }, [currentChat]);
 
+  // Fetch messages for current chat
   useEffect(() => {
     const fetchMessages = async () => {
       if (currentChat && currentUser) {
@@ -68,14 +85,18 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
         
         setMessages((prev) => [...prev, newMessage]);
         
-        // Clear input field
+        // Clear input field and draft
         setInputMessage("");
+        if (onDraftMessageChange) {
+          onDraftMessageChange("");
+        }
       } catch (error) {
         console.error("Error sending message:", error);
       }
     }
   };
 
+  // Listen for incoming messages
   useEffect(() => {
     if(socket.current) {
       socket.current.on("msg-recieve", (msg) => {
@@ -96,6 +117,7 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
     };
   }, []);
 
+  // Add arrival message to messages
   useEffect(() => {
     arrivalMessage && setMessages((prev) => [...prev, arrivalMessage]);
   }, [arrivalMessage]);
@@ -104,16 +126,12 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
     // Handle different versions of emoji-picker-react
     let emoji;
     if (emojiObject && emojiObject.emoji) {
-      // Newer versions
       emoji = emojiObject.emoji;
     } else if (event && event.emoji) {
-      // Alternative structure
       emoji = event.emoji;
     } else if (emojiObject && emojiObject.srcElement) {
-      // Older versions
       emoji = emojiObject.srcElement.innerText || emojiObject.srcElement.textContent;
     } else {
-      // Fallback if no emoji structure is recognized
       console.error("Unrecognized emoji structure:", event, emojiObject);
       return;
     }
@@ -124,10 +142,8 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
     
     setInputMessage(textBeforeCursor + emoji + textAfterCursor);
     
-    // This helps to focus back on the input after selecting an emoji
     setTimeout(() => {
       inputRef.current.focus();
-      // Place cursor after the inserted emoji
       const newCursorPosition = cursorPosition + emoji.length;
       inputRef.current.setSelectionRange(newCursorPosition, newCursorPosition);
     }, 10);
@@ -137,7 +153,6 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
   const handleSendEmoji = (event, emojiObject) => {
     let emoji;
     
-    // Extract emoji using the same logic as handleEmojiClick
     if (emojiObject && emojiObject.emoji) {
       emoji = emojiObject.emoji;
     } else if (event && event.emoji) {
@@ -149,20 +164,18 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
       return;
     }
     
-    // If input field is empty, send emoji as a standalone message
     if (inputMessage.trim().length === 0) {
       setInputMessage(emoji);
       setTimeout(() => {
         handleSendMessage();
       }, 10);
     } else {
-      // Otherwise, add emoji to input and don't send yet
       handleEmojiClick(event, emojiObject);
     }
   };
 
+  // Auto-scroll to bottom when messages change
   useEffect(() => {
-    // Auto-scroll to bottom when messages change
     if (chatMessagesRef.current) {
       chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
     }
@@ -190,6 +203,17 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
     setShowEmojiPicker(false); // Close picker after sending
   };
   
+  // Determine the display name for current chat
+  const getDisplayName = () => {
+    if (!currentChat) return "";
+    
+    if (currentChat.firstName && currentChat.lastName) {
+      return `${currentChat.firstName} ${currentChat.lastName}`;
+    }
+    
+    return currentChat.username || "";
+  };
+  
   return (
     <Container>
       <div className="chat-header">
@@ -199,20 +223,28 @@ export default function ChatContainer({ currentChat, currentUser, socket }) {
               <img src={currentChat.avatarImage} alt="avatar" />
             ) : (
               <div className="avatar-placeholder">
-                {currentChat?.username?.charAt(0).toUpperCase()}
+                {currentChat?.firstName?.charAt(0) || currentChat?.username?.charAt(0).toUpperCase()}
               </div>
             )}
           </div>
           <div className="username">
-            <h3>{currentChat?.username}</h3>
+            <h3>{getDisplayName()}</h3>
+            {currentChat?.role && (
+              <span className="user-role">{currentChat.role}</span>
+            )}
+            {currentChat?.status && (
+              <span className={`user-status ${currentChat.status}`}>
+                {currentChat.status}
+              </span>
+            )}
           </div>
-        </div>
-        <div className="chat-options">
-          <span className="dots">&#8942;</span>
         </div>
       </div>
       
       <div className="chat-messages" ref={chatMessagesRef}>
+        <div className="date-divider">
+          <span>Today</span>
+        </div>
         {messages.map((message, index) => (
           <div 
             key={index} 
@@ -267,6 +299,9 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background-color: #0d0d30;
+  border-radius: 0 0.5rem 0.5rem 0;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
   
   .chat-header {
     position: absolute;
@@ -276,11 +311,13 @@ const Container = styled.div`
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0 2rem;
+    padding: 0.8rem 2rem;
     background-color: #080420;
     height: 10%;
     min-height: 60px;
     z-index: 10;
+    border-bottom: 1px solid #9a86f322;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
     
     .user-details {
       display: flex;
@@ -289,40 +326,67 @@ const Container = styled.div`
       
       .avatar {
         img {
-          height: 3rem;
+          height: 3.5rem;
+          width: 3.5rem;
           border-radius: 50%;
+          object-fit: cover;
+          border: 2px solid #9a86f3;
         }
         
         .avatar-placeholder {
-          height: 3rem;
-          width: 3rem;
+          height: 3.5rem;
+          width: 3.5rem;
           border-radius: 50%;
-          background-color: #4e0eff;
+          background: linear-gradient(135deg, #9186f3, #5643cc);
           display: flex;
           justify-content: center;
           align-items: center;
           font-size: 1.5rem;
           font-weight: bold;
           color: white;
+          border: 2px solid #ffffff39;
+          box-shadow: 0 0 10px rgba(154, 134, 243, 0.5);
         }
       }
       
       .username {
+        display: flex;
+        flex-direction: column;
+        
         h3 {
           color: white;
           margin-bottom: 0.2rem;
+          font-weight: 600;
+          font-size: 1.2rem;
         }
-      }
-    }
-    
-    .chat-options {
-      color: white;
-      cursor: pointer;
-      
-      .dots {
-        font-size: 1.5rem;
-        font-weight: bold;
-        vertical-align: middle;
+        
+        .user-role {
+          color: #9a86f3;
+          font-size: 0.8rem;
+          margin-right: 0.5rem;
+        }
+        
+        .user-status {
+          font-size: 0.75rem;
+          padding: 0.2rem 0.5rem;
+          border-radius: 1rem;
+          background-color: #2c2c2c;
+          color: white;
+          display: inline-block;
+          margin-top: 0.2rem;
+          
+          &.online {
+            background-color: #4caf50;
+          }
+          
+          &.away {
+            background-color: #ff9800;
+          }
+          
+          &.offline {
+            background-color: #9e9e9e;
+          }
+        }
       }
     }
   }
@@ -339,29 +403,48 @@ const Container = styled.div`
     gap: 1rem;
     overflow-y: auto;
     min-height: 60px;
+    background-color: #0a0a25;
     
     &::-webkit-scrollbar {
-      width: 0.2rem;
+      width: 0.4rem;
       &-thumb {
-        background-color: #ffffff39;
+        background-color: #9a86f3;
         width: 0.1rem;
         border-radius: 1rem;
+      }
+    }
+    
+    .date-divider {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 1rem 0;
+      
+      span {
+        background-color: #9a86f3;
+        color: white;
+        padding: 0.3rem 1rem;
+        border-radius: 1rem;
+        font-size: 0.8rem;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
       }
     }
     
     .message {
       display: flex;
       align-items: flex-end;
+      margin-bottom: 0.5rem;
       
       .content {
-        max-width: 40%;
+        max-width: 65%;
         overflow-wrap: break-word;
         padding: 1rem;
         border-radius: 1rem;
         position: relative;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         
         p {
-          margin-bottom: 0.5rem;
+          margin-bottom: 0.8rem;
           word-break: break-word;
           line-height: 1.4;
         }
@@ -370,8 +453,9 @@ const Container = styled.div`
           position: absolute;
           bottom: 0.3rem;
           right: 0.8rem;
-          font-size: 0.6rem;
-          opacity: 0.7;
+          font-size: 0.65rem;
+          opacity: 0.8;
+          font-style: italic;
         }
       }
     }
@@ -380,9 +464,21 @@ const Container = styled.div`
       justify-content: flex-end;
       
       .content {
-        background-color: rgba(79, 4, 255, 0.36);
+        background: linear-gradient(to right bottom, rgba(79, 4, 255, 0.7), rgba(79, 4, 255, 0.4));
         color: white;
         border-top-right-radius: 0;
+        border-left: 1px solid rgba(255, 255, 255, 0.1);
+        
+        &:after {
+          content: "";
+          position: absolute;
+          top: 0;
+          right: -10px;
+          width: 0;
+          height: 0;
+          border-left: 10px solid rgba(79, 4, 255, 0.7);
+          border-top: 10px solid transparent;
+        }
       }
     }
     
@@ -390,9 +486,23 @@ const Container = styled.div`
       justify-content: flex-start;
       
       .content {
-        background-color: rgba(153, 0, 255, 0.36);
+        background: linear-gradient(to right bottom, rgba(153, 0, 255, 0.7), rgba(153, 0, 255, 0.4));
         color: white;
         border-top-left-radius: 0;
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+        
+        &:after {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: -10px;
+          width: 0;
+          height: 0;
+          border-right: 10px solid rgba(153, 0, 255, 0.7);
+          border-top: 10px solid transparent;
+        }
+        
+        
       }
     }
   }
@@ -406,10 +516,12 @@ const Container = styled.div`
     grid-template-columns: 5% 85% 10%;
     align-items: center;
     background-color: #080420;
-    padding: 0 2rem;
+    padding: 0.8rem 2rem;
     height: 10%;
     min-height: 60px;
     z-index: 10;
+    border-top: 1px solid #9a86f322;
+    box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.1);
     
     .emoji-area {
       position: relative;
@@ -420,6 +532,11 @@ const Container = styled.div`
         color: rgb(255, 230, 0);
         font-size: 1.5rem;
         cursor: pointer;
+        transition: transform 0.3s ease;
+        
+        &:hover {
+          transform: scale(1.1);
+        }
       }
       
       .emoji-picker-container {
@@ -429,17 +546,17 @@ const Container = styled.div`
         z-index: 20;
         display: flex;
         flex-direction: column;
+        filter: drop-shadow(0 5px 15px rgba(0, 0, 0, 0.3));
         
-        /* Custom styling for the emoji picker */
         .EmojiPickerReact, .emoji-picker-react {
-            background-color: #080420;
-            box-shadow: 0 5px 10px #9a86f3;
-            border-color: #9a86f3;
-            max-width: 280px;
-            height: 350px;
-            
-
-            .epr-search-container, .emoji-search, .emoji-mart-search {
+          background-color: #080420;
+          box-shadow: 0 5px 15px #9a86f3;
+          border-color: #9a86f3;
+          max-width: 280px;
+          height: 350px;
+          border-radius: 10px;
+          
+          .epr-search-container, .emoji-search, .emoji-mart-search {
             width: 100%;
             padding: 10px;
             background-color: #080420;
@@ -448,9 +565,9 @@ const Container = styled.div`
             align-items: center;
             border-radius: 8px;
             gap: 8px;
-            }
-            
-            .epr-search, .emoji-search input, .emoji-mart-search input {
+          }
+          
+          .epr-search, .emoji-search input, .emoji-mart-search input {
             width: 100%;
             background-color: #ffffff34;
             color: white;
@@ -467,51 +584,50 @@ const Container = styled.div`
                 outline: none;
                 border-color: #4e0eff;
             }
-            }
-
-
-            /* Target the background of emoji category headers */
-            .emoji-group-names, .emoji-categories, .epr-category-nav,
-            .epr-header-overlay, .emoji-categories-list, .emoji-group-header,
-            .epr-category-nav-item, .emoji-category-wrapper, .emoji-categories-nav,
-            .emoji-mart-anchors, .emoji-mart-category-label, .emoji-mart-category .emoji-mart-category-label {
-            background-color: #080420 !important; /* Dark purple background to match your theme */
-            }
-            
-            /* Additional specific targets for category backgrounds */
-            .emoji-group-title, .emoji-category-label, .epr-category-label,
-            .epr-emoji-category-label, .emoji-picker-category-title,
-            .emoji-mart-category-label, .emoji-category-header {
+          }
+          
+          .emoji-group-names, .emoji-categories, .epr-category-nav,
+          .epr-header-overlay, .emoji-categories-list, .emoji-group-header,
+          .epr-category-nav-item, .emoji-category-wrapper, .emoji-categories-nav,
+          .emoji-mart-anchors, .emoji-mart-category-label, .emoji-mart-category .emoji-mart-category-label {
             background-color: #080420 !important;
-            }
-            
-            .emoji-scroll-wrapper::-webkit-scrollbar,
-            .emoji-categories::-webkit-scrollbar,
-            .epr-body::-webkit-scrollbar {
+          }
+          
+          .emoji-group-title, .emoji-category-label, .epr-category-label,
+          .epr-emoji-category-label, .emoji-picker-category-title,
+          .emoji-mart-category-label, .emoji-category-header {
+            background-color: #080420 !important;
+          }
+          
+          .emoji-scroll-wrapper::-webkit-scrollbar,
+          .emoji-categories::-webkit-scrollbar,
+          .epr-body::-webkit-scrollbar {
             background-color: #080420;
             width: 5px;
             &-thumb {
                 background-color: #9a86f3;
             }
-            }
-            
-            .epr-search {
+          }
+          
+          .epr-search {
             background-color: transparent;
             border-color: #9a86f3;
-            }
+          }
         }
-    }
+      }
     }
     
     input {
       width: 100%;
-      height: 60%;
-      background-color: #ffffff34;
+      height: 70%;
+      background-color: #ffffff14;
       color: white;
       border: none;
-      padding-left: 1rem;
-      font-size: 1.2rem;
+      padding: 0 1.5rem;
+      font-size: 1.1rem;
       border-radius: 2rem;
+      transition: all 0.3s ease;
+      box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.2);
       
       &::selection {
         background-color: #9a86f3;
@@ -519,13 +635,19 @@ const Container = styled.div`
       
       &:focus {
         outline: none;
+        background-color: #ffffff24;
+        box-shadow: 0 0 0 2px #9a86f3, inset 0 0 5px rgba(0, 0, 0, 0.2);
+      }
+      
+      &::placeholder {
+        color: rgba(255, 255, 255, 0.5);
       }
     }
     
     .send-button {
-      height: 50%;
-      width: 40px;
-      background-color: #9a86f3;
+      height: 70%;
+      width: 3rem;
+      background: linear-gradient(135deg, #9a86f3, #4e0eff);
       border: none;
       border-radius: 2rem;
       display: flex;
@@ -535,11 +657,38 @@ const Container = styled.div`
       font-size: 1.2rem;
       cursor: pointer;
       margin-left: 0.5rem;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 10px rgba(78, 14, 255, 0.3);
+      
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(78, 14, 255, 0.5);
+      }
+      
+      &:active {
+        transform: translateY(1px);
+        box-shadow: 0 1px 5px rgba(78, 14, 255, 0.5);
+      }
       
       .send-icon {
         font-size: 1.3rem;
         transform: rotate(0deg);
       }
+    }
+  }
+
+  @media screen and (max-width: 768px) {
+    .chat-messages .message .content {
+      max-width: 85%;
+    }
+    
+    .chat-input {
+      grid-template-columns: 10% 75% 15%;
+      padding: 0 1rem;
+    }
+    
+    .chat-header {
+      padding: 0.8rem 1rem;
     }
   }
 `;

@@ -14,7 +14,8 @@ function Chat() {
   const [currentUser, setCurrentUser] = useState(undefined);
   const [currentChat, setCurrentChat] = useState(undefined);
   const [isLoaded, setIsLoaded] = useState(false);
-  
+  const [draftMessages, setDraftMessages] = useState({});
+
   useEffect(() => {
     const fetchData = async () => {
       if (!localStorage.getItem("chat-app-user")){
@@ -55,24 +56,39 @@ function Chat() {
     setCurrentChat(chat);
   };
 
+  // Save draft message when user types
+  const handleDraftMessageChange = (chatId, message) => {
+    setDraftMessages(prev => ({
+      ...prev,
+      [chatId]: message
+    }));
+  };
+
+  // Get draft message for current chat
+  const getDraftMessage = (chatId) => {
+    return draftMessages[chatId] || "";
+  };
+
   return (
     <Container>
       <div className="container">
         <Contacts 
           contacts={contacts} 
           currentUser={currentUser} 
-          changeChat={handleChatChange} 
+          changeChat={handleChatChange}
         />
         {currentChat ? (
           <ChatContainer 
             currentChat={currentChat} 
-            currentUser={currentUser} 
-            socket={socket} 
+            currentUser={currentUser}
+            socket={socket}
+            draftMessage={getDraftMessage(currentChat._id)}
+            onDraftMessageChange={(message) => handleDraftMessageChange(currentChat._id, message)}
           />
         ) : (
           <div className="welcome">
             <h1>Welcome to RiVVe Chat!</h1>
-            <h3>Select a chat to start messaging</h3>
+            <p>Select a chat to start messaging</p>
           </div>
         )}
       </div>
@@ -89,24 +105,44 @@ const Container = styled.div`
   gap: 1rem;
   align-items: center;
   background-color: #131324;
+  
   .container {
     height: 85vh;
     width: 85vw;
     background-color: #00000076;
     display: grid;
     grid-template-columns: 25% 75%;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+    
     @media screen and (min-width: 720px) and (max-width: 1080px) {
       grid-template-columns: 35% 65%;
     }
   }
+  
   .welcome {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     color: white;
+    background-color: #0d0d30;
+    height: 100%;
+    
     h1 {
       margin-bottom: 1rem;
+      background: linear-gradient(to right, #9186f3, #5643cc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      font-size: 2.5rem;
+      text-align: center;
+    }
+    
+    p {
+      color: #ffffffb9;
+      font-size: 1.2rem;
+      margin-top: 0.5rem;
     }
   }
 `;
