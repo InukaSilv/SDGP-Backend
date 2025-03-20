@@ -72,7 +72,7 @@ const createCheckoutSession = asyncHandler(async (req, res) => {
             mode: "subscription",
             line_items: [
                 {
-                    price: PRICES[`${role.toLowerCase()}_${featureType.toLowerCase()}`], // Dynamically select the correct price
+                    price: PRICES[`${role.toLowerCase()}_${planType.toLowerCase()}`], // Dynamically select the correct price
                     quantity: 1,
                 },
             ],
@@ -172,7 +172,7 @@ const handleWebhook = asyncHandler(async (req, res) => {
         const roleName = role.charAt(0).toUpperCase() + role.slice(1); // Capitalize first letter
         sendEmail(user.email, `${roleName} ${planName} Subscription Activated`, `
             <p>Dear ${user.firstName},</p>
-            <p>Your <strong>${roleName} ${planName}</strong> subscription is now active.</p>
+            p>Your <strong>${roleName} ${planName} ${planDurationText}</strong> subscription is now active.</p>
             <p>Subscription Expiry Date: ${new Date(payment.subscriptionExpiry).toDateString()}</p>
             <p>Features included:</p>
             <ul>
@@ -181,7 +181,7 @@ const handleWebhook = asyncHandler(async (req, res) => {
             <p>Thank you for your support!</p>
             <p>Best Regards, <br/> RiVVE Team</p>
         `);
-        logger.info(`Email sent to ${user.email} | Payment ID: ${paymentIntent.id}`);
+        logger.info(`Email sent to ${user.email} | Payment ID: ${session.id}`);
         
     }     
 //Handle failed payment        

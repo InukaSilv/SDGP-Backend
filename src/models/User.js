@@ -1,32 +1,83 @@
 const mongoose = require("mongoose");
-const bcrypt = require("bcrypt");
+const bcrypt = require("bcryptjs");
+const { type } = require("os");
 
 const UserSchema = new mongoose.Schema({
-    name: {
+    firstName: {
         type: String,
-        required: true,
+        required: function(){ return this.registerType === "password";},
+        trim: true
+    },
+    lastName: {
+        type: String,
+        required: function(){ return this.registerType === "password";},
+        trim: true
     },
     email: {
         type: String,
-        required: true,
+        required: [true, 'Email is required'],
         unique: true,
+        lowercase: true,
+        match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Invalid email format']
     },
-    password: {
+    phone: {
         type: String,
-        required: true,
+        required: function(){ return this.registerType === "password";},
+        match: [/^0\d{9}$/, 'Invalid Sri Lankan phone number format, phone number must start from 0 and should exactly have 10 characters']
+    },
+    dob: {
+        type: Date,
+        required: function(){ return this.registerType === "password";}
+    },
+    role: {
+        type: String,
+        enum: ['Student', 'Landlord'],
+        required: [true, 'Role is required'],
+        default: 'Student'
+    },
+    registerType: {
+        type: String,
+        enum:['password','google'],
+        requried:[true,'Registration type is required'],
+        default:'password'
     },
     isPremium: {
         type: Boolean,
-        default: false,
+        default: false
     },
-}, { timestamps: true });
-
-// Hash password before saving
-UserSchema.pre("save", async function (next) {
-    if (!this.isModified("password")) return next();
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
+    isEmailVerified: {
+        type: Boolean,
+        default: false
+    },
+    isPhoneVerified: {
+        type: Boolean,
+        default: false
+    },
+    verificationToken: String,
+    verificationTokenExpires: Date,
+    passwordResetToken: String,
+    passwordResetExpires: Date
+}, {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
 });
 
-module.exports = mongoose.model("User", UserSchema);
+// Password hashing middleware
+// UserSchema.pre('save', async function (next) {
+//     if (!this.isModified('password')) return next();
+
+//     try {
+//         const salt = await bcrypt.genSalt(12);
+//         this.password = await bcrypt.hash(this.password, salt);
+//         next();
+//     } catch (err) {
+//         next(err);
+//     }
+// });
+
+// Indexes (Avoid duplicates)
+UserSchema.index({ 'socialAuth.googleId': 1 });
+UserSchema.index({ 'socialAuth.facebookId': 1 });
+
+module.exports = mongoose.model('User', UserSchema);    
