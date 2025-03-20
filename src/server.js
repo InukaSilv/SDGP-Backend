@@ -1,8 +1,7 @@
 require("dotenv").config(); //Force load environment variables first
 
-const express = require("express");
 const app = require("./app"); // Import the configured app
-const { PORT } = require("./config/dotenv.config");
+const { PORT } = require("./config/dotenv.config.js");
 
 console.log("MONGO_URI:", process.env.MONGO_URI);
 
