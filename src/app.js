@@ -19,8 +19,6 @@ app.use("/api/payments/webhook", express.raw({ type: "application/json" }));
 app.use(express.json());
 app.use(cors());
 
-// Routes
-
 // Routes 
 app.use("/api/auth", require("./routes/authRoutes"));
 app.use("/api/listing", require("./routes/LstRoutes"));
@@ -29,7 +27,7 @@ app.use("/api/wishlist", require("./routes/wishlistRoutes"));
 // app.use("/api/listings", require("./routes/listingRoutes"));
 app.use("/api/payments", paymentRoutes);
 
-// Error handling middleware (if you have one)
+// Error handling middleware
 // const { errorHandler } = require("./middlewares/errorHandler");
 // app.use(errorHandler);
 
