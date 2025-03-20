@@ -107,10 +107,12 @@ const createListing = async (req, res, next) => {
 
     // Add the listing ID to the landlord's ads array
     await User.findByIdAndUpdate(req.user._id, {
-      $push: { ads: savedListing._id },
+      $push: { ads: savedListing._id},
+      $inc: { propertyCount: 1 }
     });
 
-    res.status(201).json(savedListing);
+    const updatedUser = await User.findById(req.user._id);
+    res.status(201).json({ savedListing: savedListing, user: updatedUser });
   } catch (err) {
     next(err);
     console.log(err);

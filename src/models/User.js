@@ -35,6 +35,10 @@ const UserSchema = new mongoose.Schema({
         required: [true, 'Role is required'],
         default: 'Student'
     },
+     propertyCount:{
+        type:Number,
+        min:0,
+      },
     ads: [
         {
           type: mongoose.Schema.Types.ObjectId,
