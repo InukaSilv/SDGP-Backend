@@ -1,4 +1,4 @@
-const colors = require("colors"); // Optional for better console output (install it using `npm install colors`)
+const colors = require("colors"); 
 
 // Log information
 const logInfo = (message) => {

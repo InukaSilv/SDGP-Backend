@@ -132,4 +132,12 @@ router.get("/getWishList",async(req,res,next)=>{
     getWishList(req,res,next);
 })
 
+router.post('/track-view', async (req, res, next) => {
+  trackView(req, res);
+});
+
+router.post('/track-contact-click', async (req, res, next) => {
+  trackContactClick(req, res);
+});
+
 module.exports = router;

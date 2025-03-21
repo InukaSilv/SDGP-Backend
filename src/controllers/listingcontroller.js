@@ -663,6 +663,48 @@ const getWishList = async (req, res, next) => {
   }
 };
 
+// Track a view
+const trackView = async (req, res) => {
+  try {
+    const { listingId, duration } = req.body;
+    const listing = await Listing.findById(listingId);
+
+    if (!listing) {
+      return res.status(404).json({ message: 'Listing not found' });
+    }
+
+    listing.views += 1;
+    listing.viewTimestamps.push({ duration });
+    await listing.save();
+
+    res.status(200).json({ message: 'View tracked successfully' });
+  } catch (error) {
+    console.error('Error tracking view:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+};
+
+// Track a contact click
+const trackContactClick = async (req, res) => {
+  try {
+    const { listingId } = req.body;
+    const listing = await Listing.findById(listingId);
+
+    if (!listing) {
+      return res.status(404).json({ message: 'Listing not found' });
+    }
+
+    listing.contactClicks += 1;
+    listing.contactClickTimestamps.push({ timestamp: Date.now() });
+    await listing.save();
+
+    res.status(200).json({ message: 'Contact click tracked successfully' });
+  } catch (error) {
+    console.error('Error tracking contact click:', error);
+    res.status(500).json({ error: 'Server Error' });
+  }
+};
+
 
 module.exports = {
   getAllListings,
@@ -676,11 +718,13 @@ module.exports = {
   addslots,
   initializeSocket,
   getListing,
- addEligibleUser,
- checkRevieweElig,
- getOwner,
- getReviews,
- uploadDp,
- adWishList,
- getWishList,
+  addEligibleUser,
+  checkRevieweElig,
+  getOwner,
+  getReviews,
+  uploadDp,
+  adWishList,
+  getWishList,
+  trackView,
+  trackContactClick
 };
