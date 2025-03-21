@@ -104,12 +104,17 @@ const createListing = async (req, res, next) => {
 
     const savedListing = await newListing.save();
 
-    // Add the listing ID to the landlord's ads array
-    await User.findByIdAndUpdate(req.user._id, {
-      $push: { ads: savedListing._id },
-    });
+    // increase the count of the ads to keep track
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user._id,
+      {
+        $push: { ads: savedListing._id },
+        $inc: { adCount: 1 } 
+      },
+      { new: true } 
+    );
 
-    res.status(201).json(savedListing);
+    res.status(201).json({savedListing,updatedUser});
   } catch (err) {
     next(err);
     console.log(err);
@@ -152,35 +157,109 @@ try{
 }
 }
 
-// retreiveing property based on location
-const getListing = async(req,res) =>{
-  try{
-    let {lat, lng, radius} = req.query;
-    if(!lat || !lng || !radius){
-      return res.status(400).json({error:"lng or lat not provided properly"});
+// Retrieving property based on location and filters
+const getListing = async (req, res) => {
+  try {
+    let {
+      lat,
+      lng,
+      radius,
+      minPrice,
+      maxPrice,
+      residents,
+      housingTypes,
+      roomTypes,
+      facilities,
+      sortBy
+    } = req.query;
+
+    if (!lat || !lng || !radius) {
+      return res.status(400).json({ error: "Location parameters not provided properly" });
     }
-    newlat = parseFloat(lat);
-    newlng = parseFloat(lng);
-    newradius = parseFloat(radius);
 
-    console.log("came to get the properties")
-    console.log(lat);
-    console.log(lng);
-    console.log(radius);
+    const newlat = parseFloat(lat);
+    const newlng = parseFloat(lng);
+    const newradius = parseFloat(radius);
 
-   const ads = await Listing.find({
-  location: {
-    $geoWithin: {
-      $centerSphere: [[lng, lat], radius/ 6378.1], 
-    },
-  },
-});
-res.status(200).json(ads);
-  }catch(error){
-    console.error("Error fetching ads: ",error);
-    res.status(500).json({error:"Server Error"});
+    let query = {
+      location: {
+        $geoWithin: {
+          $centerSphere: [[newlng, newlat], newradius / 6378.1],
+        },
+      }
+    };
+
+    if (minPrice && maxPrice) {
+      query.price = {
+        $gte: parseInt(minPrice),
+        $lte: parseInt(maxPrice)
+      };
+    }
+    if (residents) {
+      query.residents = { $gte: parseInt(residents) };
+    }
+
+    if (housingTypes && housingTypes.length > 0) {
+      const housingTypesArray = Array.isArray(housingTypes) 
+        ? housingTypes 
+        : [housingTypes];
+      query.housingType = { $in: housingTypesArray };
+    }
+
+    if (roomTypes && roomTypes.length > 0) {
+      const roomTypesArray = Array.isArray(roomTypes) 
+        ? roomTypes 
+        : [roomTypes];
+      
+      const roomTypeConditions = roomTypesArray.map(type => {
+        const field = type.toLowerCase().replace(' ', '') + 'Room';
+        return { [`roomTypes.${field}`]: { $gt: 0 } };
+      });
+      
+      if (roomTypeConditions.length > 0) {
+        query.$or = roomTypeConditions;
+      }
+    }
+
+    if (facilities && facilities.length > 0) {
+      const facilitiesArray = Array.isArray(facilities) 
+        ? facilities 
+        : [facilities];
+      query.facilities = { $all: facilitiesArray };
+    }
+
+    let sortOptions = {};
+    if (sortBy) {
+      switch (sortBy) {
+        case 'Price: High to Low':
+          sortOptions = { price: -1 };
+          break;
+        case 'Price: Low to High':
+          sortOptions = { price: 1 };
+          break; 
+      }
+    }
+
+    console.log("Query parameters:", {
+      latitude: newlat,
+      longitude: newlng,
+      radius: newradius,
+      filters: query,
+      sort: sortOptions
+    });
+    
+    const ads = await Listing
+      .find(query)
+      .sort(sortOptions)
+      .populate('landlord', 'firstName lastName email phone profilePhoto'); 
+
+    res.status(200).json(ads);
+
+  } catch (error) {
+    console.error("Error fetching ads: ", error);
+    res.status(500).json({ error: "Server Error" });
   }
-}
+};
 
 // landlords can add students to make it possible to write reveiws
 const addEligibleUser = async (req, res) => {
