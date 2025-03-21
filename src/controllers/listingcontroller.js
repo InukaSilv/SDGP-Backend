@@ -5,6 +5,8 @@ const Review = require("../models/Reviews")
 const User = require("../models/User");
 const PremiumWishList = require("../models/PremiumWishList");
 const {Server} = require("socket.io");
+const notifyWishlistedUsers = require("../utils/notifyWishlistedUsers");
+
 let io;
 const initializeSocket = (server) =>{
   io = new Server(server,{
@@ -137,26 +139,38 @@ console.error(err);
 }
 
 // chnaging the slots in myAds
-const addslots = async(req,res) => {
-try{
-  const {operation , adId} = req.body;
-  const property = await Listing.findById(adId);
-  if(!property){
-    return res.status(404).json({message:"Listnig not found"});
+const addslots = async (req, res) => {
+  try {
+    const { operation, adId } = req.body;
+    const property = await Listing.findById(adId);
+    if (!property) {
+      return res.status(404).json({ message: "Listing not found" });
+    }
+
+    if (operation === "add" && property.currentResidents < property.residents) {
+      property.currentResidents += 1;
+    } else if (operation === "minus" && property.currentResidents > 0) {
+      property.currentResidents -= 1;
+    } else {
+      return res.status(400).json({ message: "Invalid operation or no slots available" });
+    }
+
+    await property.save();
+
+    // Notify wishlisted users if a slot becomes available
+    if (operation === "minus" && property.currentResidents < property.residents) {
+      await notifyWishlistedUsers(property._id);
+    }
+
+    // Emit socket event for real-time updates
+    io.emit("slotsUpdated", { adId, residents: property.currentResidents });
+
+    res.status(200).json({ message: "Slots updated successfully", property });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server Error" });
   }
-  if(operation === "add"){
-    property.residents += 1;
-  }else if(operation === "minus" && property.residents > 0){
-    property.residents -=1
-  }else{
-    return res.status(400).json({message:"Invalid operation"});
-  }
-  await property.save();
-  io.emit("slotsUpdated", {adId, residents:property.residents});
-}catch(err){
-  console.error(err)
-}
-}
+};
 
 // Retrieving property based on location and filters
 const getListing = async (req, res) => {
@@ -618,41 +632,38 @@ const uploadDp = async (req, res, next) => {
 
 const adWishList = async (req, res, next) => {
   try {
-      const { userId, adId } = req.body;
-      const user = await User.findById(userId);
-      if (!user) {
-          return res.status(404).json({ message: "User not found" });
-      }
-      const existingWish = await PremiumWishList.findOne({ user: userId, property: adId });
-      if (existingWish) {
-          await existingWish.deleteOne();
-          return res.status(201).json({ message: "Removed from wishlist", status:false });
-      }
-      const newWish = new PremiumWishList({
-          user: userId,
-          property: adId,
-          email: user.email,
-      });
-      await newWish.save();
-      res.status(201).json({ message: "Added to wishlist successfully", status:true });
+    const { userId, adId } = req.body;
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const existingWish = await PremiumWishList.findOne({ user: userId, property: adId });
+    if (existingWish) {
+      await existingWish.deleteOne();
+      return res.status(201).json({ message: "Removed from wishlist", status: false });
+    }
+    const newWish = new PremiumWishList({
+      user: userId,
+      property: adId,
+      email: user.email,
+    });
+    await newWish.save();
+    res.status(201).json({ message: "Added to wishlist successfully", status: true });
   } catch (error) {
-      console.error("Error adding to wishlist:", error);
-      res.status(500).json({ message: "Server error" });
+    console.error("Error adding to wishlist:", error);
+    res.status(500).json({ message: "Server error" });
   }
 };
 
 const getWishList = async (req, res, next) => {
-  const { id } = req.query; 
-  console.log("User ID:", id);
-
+  const { id } = req.query;
   if (!id) {
     return res.status(400).json({ error: "User ID is required" });
   }
-
   try {
     const wishlist = await PremiumWishList.find({ user: id });
     if (wishlist.length === 0) {
-      return res.status(200).json([]); 
+      return res.status(200).json([]);
     }
     const propertyIds = wishlist.map((item) => item.property);
     const listings = await Listing.find({ _id: { $in: propertyIds } });
