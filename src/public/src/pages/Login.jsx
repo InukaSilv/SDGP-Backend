@@ -76,7 +76,7 @@ export default function Login() {
             onChange={handleChange}
             min="3"
           />
-          <button type="submit">Sign In</button>
+          <button type="submit">Log In</button>
         </form>
       </FormContainer>
       <ToastContainer />
