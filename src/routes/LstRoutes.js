@@ -124,4 +124,12 @@ router.put("/uploadDp",upload.single("image"),async(req,res,next) =>{
    
 })
 
+router.post('/track-view', async (req, res, next) => {
+  trackView(req, res);
+});
+
+router.post('/track-contact-click', async (req, res, next) => {
+  trackContactClick(req, res);
+});
+
 module.exports = router;

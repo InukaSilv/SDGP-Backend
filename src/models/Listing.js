@@ -85,6 +85,25 @@ const listingSchema = new mongoose.Schema({
     of: Number,
     default: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
   },
+  views: {
+    type: Number,
+    default: 0,
+  },
+  contactClicks: {
+    type: Number,
+    default: 0,
+  },
+  viewTimestamps: [
+    {
+      timestamp: { type: Date, default: Date.now },
+      duration: { type: Number }, // Time spent in seconds
+    },
+  ],
+  contactClickTimestamps: [
+    {
+      timestamp: { type: Date, default: Date.now },
+    },
+  ],
   reviews: [
           {
             type: mongoose.Schema.Types.ObjectId,

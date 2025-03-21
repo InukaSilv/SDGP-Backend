@@ -49,4 +49,8 @@ if (process.env.NODE_ENV !== "test") {
   server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
 }
 
+if (process.env.NODE_ENV === 'production') {
+    require('./scheduler');
+}
+
 module.exports = { app, server }; // exporting express app for testing
