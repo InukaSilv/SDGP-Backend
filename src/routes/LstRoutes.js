@@ -1,5 +1,5 @@
 const express = require("express");
-const { createListing, searchPersonalListing, addslots, getListing, updateListing,deleteListing,addEligibleUser,checkRevieweElig, addReview,getOwner,getReviews,uploadDp } = require("../controllers/listingcontroller");
+const { createListing, searchPersonalListing, addslots, getListing, updateListing,deleteListing,addEligibleUser,checkRevieweElig, addReview,getOwner,getReviews,uploadDp,adWishList,getWishList } = require("../controllers/listingcontroller");
 const multer = require("multer");
 const { uploadImage,deleteImage } = require("../config/azureStorage");
 const { protect } = require("../middlewares/authMiddleware");
@@ -122,6 +122,14 @@ router.put("/uploadDp",upload.single("image"),async(req,res,next) =>{
       res.status(500).send({ message: "Server error." });
     }
    
+})
+
+router.post("/adwishlist",protect,async(req,res,next)=>{
+    adWishList(req,res,next);
+})
+
+router.get("/getWishList",async(req,res,next)=>{
+    getWishList(req,res,next);
 })
 
 router.post('/track-view', async (req, res, next) => {
