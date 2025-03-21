@@ -1,5 +1,6 @@
-const transporter = require("../config/email");
+const { transporter, renderTemplate } = require("../config/email");
 const User = require("../models/User");
+const Listing = require("../models/Listing");
 
 const notifyWishlistedUsers = async (listingId) => {
   try {
@@ -13,20 +14,21 @@ const notifyWishlistedUsers = async (listingId) => {
 
     // Send email to each user
     for (const user of users) {
+      const emailHtml = await renderTemplate("wishlist-notification", {
+        name: user.firstName,
+        listing: {
+          title: listing.title,
+          description: listing.description,
+          address: listing.address,
+        },
+        listingUrl: `https://website.com/listings/${listing._id}`,
+      });
+
       const mailOptions = {
         from: process.env.EMAIL_USER,
         to: user.email,
         subject: "New Opening in Your Wishlisted Listing!",
-        template: "wishlist-notification",
-        context: {
-          name: user.firstName,
-          listing: {
-            title: listing.title,
-            description: listing.description,
-            address: listing.address,
-          },
-          listingUrl: `https://website.com/listings/${listing._id}`,
-        },
+        html: emailHtml,
       };
 
       await transporter.sendMail(mailOptions);
