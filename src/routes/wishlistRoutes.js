@@ -2,30 +2,12 @@ const express = require("express");
 const router = express.Router();
 const { protect } = require("../middlewares/authMiddleware");
 const User = require("../models/User");
-
+const { adWishList } = require("../controllers/wishlistcontroller");  
 // @desc    Add a listing to wishlist
 // @route   POST /api/wishlist/:listingId
 // @access  Private (premium students only)
-router.post("/:listingId", protect, async (req, res, next) => {
-  try {
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Check if the listing is already in the wishlist
-    if (user.wishlist.includes(req.params.listingId)) {
-      return res.status(400).json({ message: "Listing already in wishlist" });
-    }
-
-    // Add listing to wishlist
-    user.wishlist.push(req.params.listingId);
-    await user.save();
-
-    res.status(200).json({ message: "Listing added to wishlist" });
-  } catch (err) {
-    next(err);
-  }
+router.post("/adwishlist",protect, async (req, res, next) => {
+  adWishList(req,res,next);
 });
 
 // @desc    Remove a listing from wishlist
