@@ -5,6 +5,7 @@ const authRoutes = require('./routes/authRoutes');
 const LstRoutes = require('./routes/LstRoutes');
 const adminAuthRoute = require("./routes/adminAuth");
 const wishlistRoutes = require("./routes/wishlistRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 const admin = require('./config/firebaseAdmin'); 
 const cors = require('cors');
 const http = require("http");
@@ -37,7 +38,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/listing',LstRoutes )
 app.use("/api/admin", adminAuthRoute);
 app.use("/api/wishlist",wishlistRoutes)
-
+app.use("/api/payments", paymentRoutes);
 // Global error handler
 app.use((err, req, res, next) => {
     console.error(err.stack);
