@@ -5,7 +5,7 @@ const Payment = require("../models/Payment");
 const User = require("../models/User");
 const { PRICES } = require("../config/constants");
 const logger = require("../utils/logger");
-const { sendEmail } = require("../utils/emailUtils");
+// const { sendEmail } = require("../utils/emailUtils");
 
 //  Initiates a Stripe payment (called when user starts payment)
 const createCheckoutSession = asyncHandler(async (req, res) => {

@@ -26,6 +26,26 @@ const adWishList = async (req, res, next) => {
     }
   };
 
+  const getWishList = async (req, res, next) => {
+    const { id } = req.query;
+    if (!id) {
+      return res.status(400).json({ error: "User ID is required" });
+    }
+    try {
+      const wishlist = await PremiumWishList.find({ user: id });
+      if (wishlist.length === 0) {
+        return res.status(200).json([]);
+      }
+      const propertyIds = wishlist.map((item) => item.property);
+      const listings = await Listing.find({ _id: { $in: propertyIds } });
+      res.status(200).json(listings);
+    } catch (error) {
+      console.error("Error fetching wishlist:", error);
+      res.status(500).json({ error: "Server error" });
+    }
+  };
+
   module.exports = {
     adWishList,
+    getWishList,
   };

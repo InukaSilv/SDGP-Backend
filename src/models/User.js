@@ -41,12 +41,6 @@ const UserSchema = new mongoose.Schema({
           ref: "Listing",
         },
     ],
-    adCount:[
-        {
-            type: Number,
-            min:0,
-        }
-    ],
     wishlist: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Wishlist",
