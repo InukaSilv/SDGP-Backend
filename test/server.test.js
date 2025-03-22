@@ -1,7 +1,7 @@
 const request = require("supertest");
 const { app, server } = require("../src/server"); // Import the Express app and server
 const mongoose = require("mongoose"); // Import mongoose
-const { subscriptionCron } = require("../src/controllers/paymentcontroller"); 
+jest.mock("node-cron"); 
 
 describe("Server Tests", () => {
   // Start the server before tests
@@ -11,22 +11,12 @@ describe("Server Tests", () => {
     });
   }, 15000); 
 
-  // Stop the server, close MongoDB connection, and stop the cron job after tests
+  // Stop the server and close MongoDB connection after tests
   afterAll(async () => {
-    if (subscriptionCron) {
-      subscriptionCron.stop();
-      console.log("Cron job stopped.");
-    }
-
-    // Close MongoDB connection
-    await mongoose.connection.close();
-    console.log("MongoDB connection closed.");
-
-    // Close the server
+    await mongoose.connection.close(); // Close MongoDB connection
     await new Promise((resolve) => {
-      server.close(resolve);
+      server.close(resolve); // Close the server
     });
-    console.log("Server closed.");
   }, 15000); 
 
   test("GET /api/health-check should return 200", async () => {
