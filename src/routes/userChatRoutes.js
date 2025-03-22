@@ -1,4 +1,4 @@
-const { login, getAllUsers } = require("../controllers/userController");
+const { login, getAllUsers } = require("../controllers/userChatController");
 
 const router = require("express").Router();
 
