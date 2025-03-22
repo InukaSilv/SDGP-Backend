@@ -5,7 +5,7 @@ const Payment = require("../models/Payment");
 const User = require("../models/User");
 const { PRICES } = require("../config/constants");
 const logger = require("../utils/logger");
-const { sendEmail } = require("../utils/emailUtils");
+// const { sendEmail } = require("../utils/emailUtils");
 
 //  Initiates a Stripe payment (called when user starts payment)
 const createCheckoutSession = asyncHandler(async (req, res) => {
@@ -249,6 +249,46 @@ const subscribtionCron = cron.schedule("0 0 * * *", async () => {
     logger.info("Auto-downgrade task completed.");
 });
 
+const verifyPaymentSession = asyncHandler(async (req, res) => {
+    const { sessionId } = req.params;
+    const userId = req.user.id;
+
+    if (!sessionId) {
+        return res.status(400).json({ error: "Session ID is required" });
+    }
+
+    try {
+        // Verify the session with Stripe
+        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        
+        // Make sure this session belongs to this user
+        if (session.metadata.userId !== userId) {
+            return res.status(403).json({ error: "Unauthorized access to payment information" });
+        }
+
+        // Find the payment record
+        const payment = await Payment.findOne({ transactionId: sessionId });
+        
+        if (!payment) {
+            return res.status(404).json({ error: "Payment record not found" });
+        }
+
+        // Return payment details to display on success page
+        res.json({
+            planType: payment.planType,
+            planDuration: payment.planDuration,
+            amount: payment.amount,
+            currency: payment.currency,
+            subscriptionExpiry: payment.subscriptionExpiry,
+            status: payment.status
+        });
+        
+    } catch (error) {
+        console.error(`Payment verification failed: ${error.message}`);
+        res.status(500).json({ error: "Failed to verify payment session" });
+    }
+});
+
 
 //Gets a user's payment history
 const getPaymentHistory = asyncHandler(async (req, res) => {
@@ -260,4 +300,5 @@ const getPaymentHistory = asyncHandler(async (req, res) => {
     }
 });
 
-module.exports = { createCheckoutSession, handleWebhook, getPaymentHistory, subscribtionCron };
+
+module.exports = { createCheckoutSession, handleWebhook, getPaymentHistory, verifyPaymentSession, subscribtionCron };

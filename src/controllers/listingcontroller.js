@@ -174,6 +174,7 @@ const addslots = async (req, res) => {
 
 // Retrieving property based on location and filters
 const getListing = async (req, res) => {
+  console.log("came here")
   try {
     let {
       lat,
@@ -219,37 +220,46 @@ const getListing = async (req, res) => {
       query.housingType = { $in: housingTypesArray };
     }
 
-    if (roomTypes && roomTypes.length > 0) {
-      const roomTypesArray = Array.isArray(roomTypes) 
-        ? roomTypes 
-        : [roomTypes];
-      
+    if (selectedRoomType && selectedRoomType.length > 0) {
+      const roomTypesArray = Array.isArray(selectedRoomType) 
+        ? selectedRoomType 
+        : [selectedRoomType];
       const roomTypeConditions = roomTypesArray.map(type => {
-        const field = type.toLowerCase().replace(' ', '') + 'Room';
-        return { [`roomTypes.${field}`]: { $gt: 0 } };
-      });
-      
+        if (type === 'Single') {
+          return { 'roomTypes.singleRoom': { $gt: 0 } };
+        } else if (type === 'Double') {
+          return { 'roomTypes.doubleRoom': { $gt: 0 } };
+        }
+        return null;
+      }).filter(condition => condition !== null); 
       if (roomTypeConditions.length > 0) {
         query.$or = roomTypeConditions;
       }
     }
 
-    if (facilities && facilities.length > 0) {
-      const facilitiesArray = Array.isArray(facilities) 
-        ? facilities 
-        : [facilities];
+    if (selectedFacility && selectedFacility.length > 0) {
+      const facilitiesArray = Array.isArray(selectedFacility) 
+        ? selectedFacility 
+        : [selectedFacility];
       query.facilities = { $all: facilitiesArray };
     }
 
     let sortOptions = {};
-    if (sortBy) {
-      switch (sortBy) {
+    if (selectedOption) {
+      switch (selectedOption) {
         case 'Price: High to Low':
           sortOptions = { price: -1 };
           break;
         case 'Price: Low to High':
           sortOptions = { price: 1 };
           break; 
+        case 'Date: Oldest on Top':
+          sortOptions = { createdAt: -1 };
+          break;
+        case 'Date: Newest on Top':
+          sortOptions = { createdAt: 1 };
+          break;
+          
       }
     }
 
@@ -266,6 +276,7 @@ const getListing = async (req, res) => {
       .sort(sortOptions)
       .populate('landlord', 'firstName lastName email phone profilePhoto'); 
 
+      
     res.status(200).json(ads);
 
   } catch (error) {
@@ -630,54 +641,14 @@ const uploadDp = async (req, res, next) => {
   res.status(200).send({ message: "Profile photo updated successfully.",user });
 };
 
-const adWishList = async (req, res, next) => {
-  try {
-    const { userId, adId } = req.body;
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    const existingWish = await PremiumWishList.findOne({ user: userId, property: adId });
-    if (existingWish) {
-      await existingWish.deleteOne();
-      return res.status(201).json({ message: "Removed from wishlist", status: false });
-    }
-    const newWish = new PremiumWishList({
-      user: userId,
-      property: adId,
-      email: user.email,
-    });
-    await newWish.save();
-    res.status(201).json({ message: "Added to wishlist successfully", status: true });
-  } catch (error) {
-    console.error("Error adding to wishlist:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
 
-const getWishList = async (req, res, next) => {
-  const { id } = req.query;
-  if (!id) {
-    return res.status(400).json({ error: "User ID is required" });
-  }
-  try {
-    const wishlist = await PremiumWishList.find({ user: id });
-    if (wishlist.length === 0) {
-      return res.status(200).json([]);
-    }
-    const propertyIds = wishlist.map((item) => item.property);
-    const listings = await Listing.find({ _id: { $in: propertyIds } });
-    res.status(200).json(listings);
-  } catch (error) {
-    console.error("Error fetching wishlist:", error);
-    res.status(500).json({ error: "Server error" });
-  }
-};
 
 // Track a view
 const trackView = async (req, res) => {
+  console.log("came here to check time")
   try {
     const { listingId, duration } = req.body;
+    console.log(listingId,duration)
     const listing = await Listing.findById(listingId);
 
     if (!listing) {
@@ -734,8 +705,6 @@ module.exports = {
   getOwner,
   getReviews,
   uploadDp,
-  adWishList,
-  getWishList,
   trackView,
   trackContactClick
 };
