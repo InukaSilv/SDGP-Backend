@@ -1,15 +1,10 @@
 # Virtual environments
-venv/
-.env/
+ai_service/venv/
 
 # Python bytecode files
-*.pyc
-*.pyo
-__pycache__/
+**/*.pyc
+**/*.pyo
+**/__pycache__/
 
-# IDEs and editors
-.idea/
-.vscode/
-
-# Other possible directories to ignore
-*.log
+# dotenv files (secrets and env variables)
+**/.env

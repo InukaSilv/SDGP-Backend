@@ -1,2 +1,5 @@
-# dependencies
-/node_modules
+# Node modules folder (if you install node modules later)
+chatbot-backend/node_modules/
+
+# dotenv files for Node.js (secrets and env variables)
+chatbot-backend/.env
