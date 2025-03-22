@@ -7,6 +7,7 @@ import os
 from dotenv import load_dotenv
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
+from flask_socketio import SocketIO
 
 # Load environment variables
 load_dotenv()
@@ -14,6 +15,8 @@ load_dotenv()
 app = Flask(__name__)
 # Enable CORS for all routes
 CORS(app, resources={r"/*": {"origins": "*"}})
+# Initialize Socket.IO
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 class BoardingHouseChatbot:
     def __init__(self):
@@ -127,10 +130,31 @@ class BoardingHouseChatbot:
             'saved': save_success
         }
     
+    def get_conversation_history(self, conversation_id, limit=10):
+        client, db = self.get_db_connection()
+        try:
+            if client is not None and db is not None:
+                # Get the messages for this conversation, sorted by timestamp
+                messages = list(db.chats.find(
+                    {"conversation_id": conversation_id},
+                    {"_id": 0, "user_message": 1, "bot_response": 1, "timestamp": 1}
+                ).sort("timestamp", 1).limit(limit))
+                
+                return messages
+            return []
+        except Exception as e:
+            print(f"Error retrieving conversation history: {e}")
+            return []
+        finally:
+            if client is not None:
+                client.close()
+    
 # Initialize chatbot
 chatbot = BoardingHouseChatbot()
 
+# Combined REST endpoint for chat (handling both the original Flask and Express functionality)
 @app.route('/chat', methods=['POST', 'OPTIONS'])
+@app.route('/api/chat', methods=['POST', 'OPTIONS'])
 def chat():
     # Handle preflight OPTIONS request
     if request.method == 'OPTIONS':
@@ -139,22 +163,71 @@ def chat():
     data = request.json 
     print(f"Received chat request: {data}")
     
-    if not all(k in data for k in ['user_id', 'message', 'conversation_id']):
+    # Support both naming conventions (Express and Flask)
+    user_id = data.get('user_id') or data.get('userId')
+    message = data.get('message')
+    conversation_id = data.get('conversation_id') or data.get('conversationId')
+    
+    if not all([user_id, message, conversation_id]):
         return jsonify({'error': 'Missing required fields'}), 400
     
     result = chatbot.process_user_message(
-        data['user_id'],
-        data['message'],
-        data['conversation_id']
+        user_id,
+        message,
+        conversation_id
     )
+    
+    # Emit the message via Socket.IO
+    socketio.emit('chat_response', {
+        'user_id': user_id,
+        'message': message,
+        'response': result['response'],
+        'conversation_id': conversation_id,
+        'timestamp': datetime.now().isoformat()
+    })
     
     print(f"Sending response: {result}")
     return jsonify(result)
+
+# Socket.IO event handlers
+@socketio.on('connect')
+def handle_connect():
+    print('Client connected via Socket.IO')
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    print('Client disconnected from Socket.IO')
+
+@socketio.on('send_message')
+def handle_message(data):
+    print(f"Received message via Socket.IO: {data}")
+    user_id = data.get('user_id')
+    message = data.get('message')
+    conversation_id = data.get('conversation_id')
+    
+    if all([user_id, message, conversation_id]):
+        result = chatbot.process_user_message(user_id, message, conversation_id)
+        socketio.emit('chat_response', {
+            'user_id': user_id,
+            'message': message,
+            'response': result['response'],
+            'conversation_id': conversation_id,
+            'timestamp': datetime.now().isoformat()
+        })
+    else:
+        socketio.emit('error', {'message': 'Missing required fields'})
+
+# Get conversation history
+@app.route('/api/history/<conversation_id>', methods=['GET'])
+def get_history(conversation_id):
+    history = chatbot.get_conversation_history(conversation_id)
+    return jsonify({'history': history})
 
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({'status': 'OK', 'timestamp': datetime.now().isoformat()})
 
 if __name__ == '__main__':
-    port = int(os.getenv('FLASK_PORT', 5002))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    port = int(os.getenv('PORT', 5001))
+    # Use socketio.run instead of app.run to enable WebSocket support
+    socketio.run(app, host='0.0.0.0', port=port, debug=True, allow_unsafe_werkzeug=True)
