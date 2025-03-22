@@ -212,7 +212,7 @@ const handleWebhook = asyncHandler(async (req, res) => {
 });
 
 // Auto-downgrade expired subscriptions
-cron.schedule("0 0 * * *", async () => {
+const subscribtionCron = cron.schedule("0 0 * * *", async () => {
     const now = new Date();
     const expiredPayments = await Payment.find({ 
         subscriptionExpiry: { $lt: now }, 
@@ -300,4 +300,5 @@ const getPaymentHistory = asyncHandler(async (req, res) => {
     }
 });
 
-module.exports = { createCheckoutSession, handleWebhook, getPaymentHistory, verifyPaymentSession };
+
+module.exports = { createCheckoutSession, handleWebhook, getPaymentHistory, verifyPaymentSession, subscribtionCron };
