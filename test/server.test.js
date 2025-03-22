@@ -1,6 +1,7 @@
 const request = require("supertest");
 const { app, server } = require("../src/server"); // Import the Express app and server
 const mongoose = require("mongoose"); // Import mongoose
+const { subscriptionCron } = require("../src/controllers/paymentcontroller"); 
 
 describe("Server Tests", () => {
   // Start the server before tests
@@ -8,15 +9,22 @@ describe("Server Tests", () => {
     await new Promise((resolve) => {
       server.listen(0, resolve); // Use port 0 to dynamically assign an available port
     });
-  }, 15000); // Increase timeout to 15 seconds
+  }, 15000); 
 
-  // Stop the server and close MongoDB connection after tests
+  // Stop the server, close MongoDB connection, and stop the cron job after tests
   afterAll(async () => {
-    await mongoose.connection.close(); // Close MongoDB connection
+    if (subscriptionCron) {
+      subscriptionCron.stop();
+    }
+
+    // Close MongoDB connection
+    await mongoose.connection.close();
+
+    // Close the server
     await new Promise((resolve) => {
-      server.close(resolve); // Close the server
+      server.close(resolve);
     });
-  }, 15000); // Increase timeout to 15 seconds
+  }, 15000);
 
   test("GET /api/health-check should return 200", async () => {
     const response = await request(app).get("/api/health-check");
