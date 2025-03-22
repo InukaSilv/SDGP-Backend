@@ -19,5 +19,8 @@ COPY . .
 # Expose the port app runs on
 EXPOSE 5001
 
+# Set the environment variable for the port
+ENV PORT=5001
+
 # Command to run application
 CMD ["node", "src/server.js"]
