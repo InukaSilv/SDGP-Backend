@@ -1,0 +1,40 @@
+# Ignore Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore virtual environment
+venv/
+
+# Ignore environment variables file
+.env
+
+# Ignore Flask instance folder (if any)
+instance/
+
+# Ignore VSCode workspace settings (optional)
+.vscode/
+
+# Ignore log files
+*.log
+
+# Ignore distribution files and packaging
+build/
+dist/
+*.egg-info/
+
+# Ignore SQLite database file (if you use it)
+*.sqlite3
+
+# Ignore Jupyter Notebook checkpoints (optional)
+.ipynb_checkpoints/
+
+# Ignore any other IDE-specific files (e.g., JetBrains)
+.idea/
+
+# Ignore pytest cache (optional)
+.cache/
+
+# Ignore any other system files
+.DS_Store
+Thumbs.db
