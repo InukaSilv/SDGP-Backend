@@ -15,16 +15,19 @@ describe("Server Tests", () => {
   afterAll(async () => {
     if (subscriptionCron) {
       subscriptionCron.stop();
+      console.log("Cron job stopped.");
     }
 
     // Close MongoDB connection
     await mongoose.connection.close();
+    console.log("MongoDB connection closed.");
 
     // Close the server
     await new Promise((resolve) => {
       server.close(resolve);
     });
-  }, 15000);
+    console.log("Server closed.");
+  }, 15000); 
 
   test("GET /api/health-check should return 200", async () => {
     const response = await request(app).get("/api/health-check");
