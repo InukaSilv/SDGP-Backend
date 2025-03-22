@@ -1,4 +1,4 @@
-# Use the official Node.js image 
+# Use the official Node.js image
 FROM node:18
 
 # Set the working directory inside the container
@@ -9,6 +9,7 @@ COPY package*.json ./
 
 # Set environment variables
 ENV NODE_ENV=production
+ENV PORT=5001
 
 # Install dependencies
 RUN npm ci --only=production
@@ -18,9 +19,6 @@ COPY . .
 
 # Expose the port app runs on
 EXPOSE 5001
-
-# Set the environment variable for the port
-ENV PORT=5001
 
 # Command to run application
 CMD ["node", "src/server.js"]
