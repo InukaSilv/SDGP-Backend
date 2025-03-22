@@ -7,7 +7,7 @@ const passport = require('passport');
 const { signup, login, socialAuth,checkForForget } = require('../controllers/authcontroller');
 const { validateSignup, validateLogin } = require('../validators/authValidators');
 const { protect } = require("../middlewares/authMiddleware");
-const { updateUserProfile,verifyPhone } = require('../controllers/usercontroller');
+const { updateUserProfile,verifyPhone,updatePayment  } = require('../controllers/usercontroller');
 
 
 // Local authentication
@@ -17,6 +17,10 @@ router.post('/checkforforget',checkForForget);
 router.put("/update-user", async (req, res, next) => {
     updateUserProfile(req, res, next);
 });
+
+router.put("/updatepayment",async(req,res,next)=>{
+    updatePayment(req,res,next);
+})
 
 
 router.get("/verifyPhone", async (req, res, next) => {

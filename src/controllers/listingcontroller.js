@@ -174,6 +174,7 @@ const addslots = async (req, res) => {
 
 // Retrieving property based on location and filters
 const getListing = async (req, res) => {
+  console.log("came here")
   try {
     let {
       lat,
@@ -219,37 +220,46 @@ const getListing = async (req, res) => {
       query.housingType = { $in: housingTypesArray };
     }
 
-    if (roomTypes && roomTypes.length > 0) {
-      const roomTypesArray = Array.isArray(roomTypes) 
-        ? roomTypes 
-        : [roomTypes];
-      
+    if (selectedRoomType && selectedRoomType.length > 0) {
+      const roomTypesArray = Array.isArray(selectedRoomType) 
+        ? selectedRoomType 
+        : [selectedRoomType];
       const roomTypeConditions = roomTypesArray.map(type => {
-        const field = type.toLowerCase().replace(' ', '') + 'Room';
-        return { [`roomTypes.${field}`]: { $gt: 0 } };
-      });
-      
+        if (type === 'Single') {
+          return { 'roomTypes.singleRoom': { $gt: 0 } };
+        } else if (type === 'Double') {
+          return { 'roomTypes.doubleRoom': { $gt: 0 } };
+        }
+        return null;
+      }).filter(condition => condition !== null); 
       if (roomTypeConditions.length > 0) {
         query.$or = roomTypeConditions;
       }
     }
 
-    if (facilities && facilities.length > 0) {
-      const facilitiesArray = Array.isArray(facilities) 
-        ? facilities 
-        : [facilities];
+    if (selectedFacility && selectedFacility.length > 0) {
+      const facilitiesArray = Array.isArray(selectedFacility) 
+        ? selectedFacility 
+        : [selectedFacility];
       query.facilities = { $all: facilitiesArray };
     }
 
     let sortOptions = {};
-    if (sortBy) {
-      switch (sortBy) {
+    if (selectedOption) {
+      switch (selectedOption) {
         case 'Price: High to Low':
           sortOptions = { price: -1 };
           break;
         case 'Price: Low to High':
           sortOptions = { price: 1 };
           break; 
+        case 'Date: Oldest on Top':
+          sortOptions = { createdAt: -1 };
+          break;
+        case 'Date: Newest on Top':
+          sortOptions = { createdAt: 1 };
+          break;
+          
       }
     }
 
@@ -266,6 +276,7 @@ const getListing = async (req, res) => {
       .sort(sortOptions)
       .populate('landlord', 'firstName lastName email phone profilePhoto'); 
 
+      
     res.status(200).json(ads);
 
   } catch (error) {
