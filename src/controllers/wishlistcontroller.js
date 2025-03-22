@@ -1,5 +1,6 @@
 const PremiumWishList = require("../models/PremiumWishList");
 const User = require("../models/User");
+const Listing = require("../models/Listing");
 
 const adWishList = async (req, res, next) => {
     try {
@@ -26,6 +27,7 @@ const adWishList = async (req, res, next) => {
     }
   };
 
+
   const getWishList = async (req, res, next) => {
     const { id } = req.query;
     if (!id) {
@@ -45,7 +47,35 @@ const adWishList = async (req, res, next) => {
     }
   };
 
+  const deleteWishList = async (req, res,next) => {
+    const { userId, adId } = req.query;
+    if (!userId || !adId) {
+      return res.status(400).json({ error: "User ID and Ad ID are required" });
+    }
+  
+    try {
+      const existingEntry = await PremiumWishList.findOne({
+        user: userId,
+        property: adId,
+      });
+  
+      if (existingEntry) {
+        await PremiumWishList.deleteOne({ user: userId, property: adId });
+        return res.status(200).json({ message: "Removed from wishlist", action: "removed" });
+      }
+      else{
+        return res.status(200).json({ message: "Not in wishlist", action: "not in wishlist" });
+      }
+    } catch (error) {
+      console.error("Error toggling wishlist:", error);
+      res.status(500).json({ error: "Server error" });
+    }
+  };
+  
+
+
   module.exports = {
     adWishList,
     getWishList,
+    deleteWishList,
   };

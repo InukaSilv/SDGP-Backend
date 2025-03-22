@@ -643,7 +643,8 @@ const uploadDp = async (req, res, next) => {
 
 
 
-// Track a view
+// Track a view 
+// when a user clicks on a listing it takes the record
 const trackView = async (req, res) => {
   console.log("came here to check time")
   try {
@@ -665,6 +666,7 @@ const trackView = async (req, res) => {
     res.status(500).json({ error: 'Server Error' });
   }
 };
+
 
 // Track a contact click
 const trackContactClick = async (req, res) => {
@@ -706,5 +708,5 @@ module.exports = {
   getReviews,
   uploadDp,
   trackView,
-  trackContactClick
+  trackContactClick,
 };

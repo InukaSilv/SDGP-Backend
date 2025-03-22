@@ -1,5 +1,5 @@
 const express = require("express");
-const { createListing, searchPersonalListing, addslots, getListing, updateListing,deleteListing,addEligibleUser,checkRevieweElig, addReview,getOwner,getReviews,uploadDp,trackView } = require("../controllers/listingcontroller");
+const { createListing, searchPersonalListing, addslots, getListing, updateListing,deleteListing,addEligibleUser,checkRevieweElig, addReview,getOwner,getReviews,uploadDp,trackView,trackContactClick } = require("../controllers/listingcontroller");
 const multer = require("multer");
 const { uploadImage,deleteImage } = require("../config/azureStorage");
 const { protect } = require("../middlewares/authMiddleware");
