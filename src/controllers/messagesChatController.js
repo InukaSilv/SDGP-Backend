@@ -1,5 +1,4 @@
 const messageModel = require("../models/messageChatModel");
-const User = require("../model/userChatModel");
 
 module.exports.addMessage = async (req, res, next) => {
     try {
