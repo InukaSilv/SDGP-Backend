@@ -9,11 +9,8 @@ dotenv.config({ path: '../.env' });
 // Connect to the database
 connectDB();
 
-const paymentRoutes = require("./routes/paymentRoutes");
 const app = express();
 
-// Stripe requires raw body parsing for webhooks
-app.post("/api/payments/handleWebhook", express.raw({ type: "application/json" }), handleWebhook);
 
 app.use(express.json());
 app.use(cors());
@@ -24,7 +21,7 @@ app.use("/api/listing", require("./routes/LstRoutes"));
 app.use("/api/wishlist", require("./routes/wishlistRoutes"));
 // app.use("/api/users", require("./routes/userRoutes"));
 // app.use("/api/listings", require("./routes/listingRoutes"));
-app.use("/api/payments", paymentRoutes);
+app.use("/api/payments", require("./routes/paymentRoutes"));
 
 // Error handling middleware
 // const { errorHandler } = require("./middlewares/errorHandler");

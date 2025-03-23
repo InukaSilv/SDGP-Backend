@@ -7,6 +7,11 @@ const { PRICES } = require("../config/constants");
 const logger = require("../utils/logger");
 const { sendEmail } = require("../utils/emailUtils");
 
+// Generates an auth token for success redirect
+const generateAuthToken = (user) => {
+    return `mocked_token_for_${user._id}`;
+};
+
 //  Initiates a Stripe payment (called when user starts payment)
 const createCheckoutSession = asyncHandler(async (req, res) => {
     const { planType, planDuration } = req.body;
@@ -63,6 +68,7 @@ const createCheckoutSession = asyncHandler(async (req, res) => {
         return res.status(400).json({ error: "Invalid plan or role" });
     }
 
+    const userToken = generateAuthToken(user);
     try {
         // Create Stripe payment session
         const session = await stripe.checkout.sessions.create({
@@ -74,7 +80,8 @@ const createCheckoutSession = asyncHandler(async (req, res) => {
                     quantity: 1,
                 },
             ],
-            success_url: `${process.env.CLIENT_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}&token={USER_TOKEN}`,
+    
+            success_url: `${process.env.CLIENT_URL}/payment-success?session_id={CHECKOUT_SESSION_ID}&token=${userToken}`,
             cancel_url: `${process.env.CLIENT_URL}/cancel`,
             metadata: {
                 userId,
@@ -100,7 +107,13 @@ const handleWebhook = asyncHandler(async (req, res) => {
     let event;
 
     try {
-        event = stripe.webhooks.constructEvent(req.body, sig, process.env.STRIPE_WEBHOOK_SECRET);
+        event = stripe.webhooks.constructEvent(
+            req.body,
+            sig, 
+            process.env.STRIPE_WEBHOOK_SECRET
+        );
+        console.log("Webhook received:", event.type);
+
     } catch (error) {
         console.error("webhook signature verification failed.")
         return res.status(400).json({ error: "Webhook verification failed", message: error.message });
@@ -123,6 +136,7 @@ const handleWebhook = asyncHandler(async (req, res) => {
             return res.status(404).json({ error: "User not found" });
         }
 
+        await User.findByIdAndUpdate(userId, { isPremium: true });
         // Calculate subscription expiry date
         let expiryDate = new Date();
         const activePayment = await Payment.findOne({ 
@@ -147,7 +161,7 @@ const handleWebhook = asyncHandler(async (req, res) => {
         expiryDate.setDate(expiryDate.getDate() + durationDays);
 
         // If no payment record exists, create one
-        const payment = new Payment({
+        const newPayment = new Payment({
             userId,
             userRole: role,
             planType,

@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
+const { handleWebhook } = require('./controllers/paymentcontroller');
 const authRoutes = require('./routes/authRoutes');
 const LstRoutes = require('./routes/LstRoutes');
 const adminAuthRoute = require("./routes/adminAuth");
@@ -16,6 +17,12 @@ const {initializeSocket} = require("./controllers/listingcontroller");
 
 const app = express();
 const server = http.createServer(app);
+
+app.post(
+  "/api/payments/handleWebhook",
+  express.raw({ type: "application/json" }),
+  handleWebhook
+);
 
 // Middleware
 app.use(cors());
