@@ -273,7 +273,7 @@ const getListing = async (req, res) => {
     
     const ads = await Listing
       .find(query)
-      .sort(sortOptions)
+      .sort({ boostStatus: -1, ...sortOptions })
       .populate('landlord', 'firstName lastName email phone profilePhoto'); 
 
       

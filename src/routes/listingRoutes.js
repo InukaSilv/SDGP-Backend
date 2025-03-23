@@ -34,7 +34,6 @@ router.post("/", protect, upload.array("images", 7), async (req, res, next) => {
     // Add image URLs to req object
     req.imageUrls = imageUrls;
 
-    // Pass control to the createListing controller
     createListing(req, res, next);
   } catch (err) {
     next(err);

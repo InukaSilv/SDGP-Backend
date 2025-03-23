@@ -4,11 +4,11 @@ const { BlobServiceClient } = require("@azure/storage-blob");
 const connectionString = process.env.AZURE_STORAGE_CONNECTION_STRING;
 const containerName = "listings"; 
 
-// Initialize BlobServiceClient
+// initialize BlobServiceClient
 const blobServiceClient = BlobServiceClient.fromConnectionString(connectionString);
 const containerClient = blobServiceClient.getContainerClient(containerName);
 
-// Function to upload an image to Azure Blob Storage
+// upload an image to Azure Blob Storage
 const uploadImage = async (file) => {
   try {
     const blobName = `${Date.now()}_${file.originalname}`; 
@@ -19,7 +19,7 @@ const uploadImage = async (file) => {
       blobHTTPHeaders: { blobContentType: file.mimetype },
     });
 
-    // Return the public URL of the uploaded image
+    // return public URL of the uploaded image
     return blockBlobClient.url;
   } catch (err) {
     throw new Error(`Failed to upload image: ${err.message}`);
@@ -28,7 +28,7 @@ const uploadImage = async (file) => {
 
 const deleteImage = async (imageUrl) => {
   try {
-    // Extract blob name and decode it
+    // extract blob name and decode it
     const urlParts = imageUrl.split("/");
     const blobName = decodeURIComponent(urlParts[urlParts.length - 1]); 
 
