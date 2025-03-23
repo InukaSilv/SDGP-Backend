@@ -1,5 +1,5 @@
 const express = require("express");
-const { createListing, searchPersonalListing, addslots, getListing, updateListing,deleteListing,addEligibleUser,checkRevieweElig, addReview,getOwner,getReviews,uploadDp,adWishList,getWishList } = require("../controllers/listingcontroller");
+const { createListing, searchPersonalListing, addslots, getListing, updateListing,deleteListing,addEligibleUser,checkRevieweElig, addReview,getOwner,getReviews,uploadDp,trackView,trackContactClick,boostAd } = require("../controllers/listingcontroller");
 const multer = require("multer");
 const { uploadImage,deleteImage } = require("../config/azureStorage");
 const { protect } = require("../middlewares/authMiddleware");
@@ -98,14 +98,17 @@ router.post("/post-review",protect,async(req, res, next) =>{
     addReview(req,res,next);
 })
 
+// get owner details
 router.get("/getowner",async(req,res,next) =>{
     getOwner(req,res,next);
 })
 
+// get reviews and similar properties
 router.get("/get-reviews", async(req,res,next)=>{
     getReviews(req,res,next);
 })
 
+// upload profile photo
 router.put("/uploadDp",upload.single("image"),async(req,res,next) =>{
     try {
       if (!req.file) {
@@ -124,20 +127,20 @@ router.put("/uploadDp",upload.single("image"),async(req,res,next) =>{
    
 })
 
-router.post("/adwishlist",protect,async(req,res,next)=>{
-    adWishList(req,res,next);
-})
-
-router.get("/getWishList",async(req,res,next)=>{
-    getWishList(req,res,next);
-})
-
+// track view
 router.post('/track-view', async (req, res, next) => {
   trackView(req, res);
 });
 
+// track contact click
 router.post('/track-contact-click', async (req, res, next) => {
   trackContactClick(req, res);
 });
+
+// change boost ad status
+router.put("/boost-ad",async(req,res,next)=>{
+    console.log("came here");
+    boostAd(req,res,next);
+  })
 
 module.exports = router;

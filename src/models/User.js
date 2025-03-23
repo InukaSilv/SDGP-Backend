@@ -35,18 +35,20 @@ const UserSchema = new mongoose.Schema({
         required: [true, 'Role is required'],
         default: 'Student'
     },
+     propertyCount:{
+        type:Number,
+        min:0,
+      },
     ads: [
         {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Listing",
         },
     ],
-    adCount:[
-        {
-            type: Number,
-            min:0,
-        }
-    ],
+    adCount:{
+        type:Number,
+        default:0
+    },
     wishlist: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Wishlist",
@@ -80,6 +82,16 @@ const UserSchema = new mongoose.Schema({
         type: Boolean,
         default: false
     },
+    IdVerificationStatus:{
+        type: String,
+        enum:['Pending','NotSubmitted',"Verified","Rejected"],
+        requried:[true,'Payment type is required'],
+        default:'NotSubmitted',
+        trim: true
+    },
+    IDimages: {
+        type: [String], 
+      },
     profilePhoto:{
         type: String,
         default:""
@@ -109,5 +121,6 @@ const UserSchema = new mongoose.Schema({
 
 // Indexes (Avoid duplicates)
 UserSchema.index({ 'socialAuth.googleId': 1 });
+
 
 module.exports = mongoose.model('User', UserSchema);    

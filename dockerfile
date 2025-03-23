@@ -1,4 +1,4 @@
-# Use the official Node.js image 
+# Use the official Node.js image
 FROM node:18
 
 # Set the working directory inside the container
@@ -9,6 +9,7 @@ COPY package*.json ./
 
 # Set environment variables
 ENV NODE_ENV=production
+ENV PORT=5001
 
 # Install dependencies
 RUN npm ci --only=production

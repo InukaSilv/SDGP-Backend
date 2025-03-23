@@ -6,6 +6,8 @@ const LstRoutes = require('./routes/LstRoutes');
 const adminAuthRoute = require("./routes/adminAuth");
 const userRoutes = require("./routes/userChatRoutes");
 const messageRoutes = require("./routes/messagesChatRoute");
+const wishlistRoutes = require("./routes/wishlistRoutes");
+const paymentRoutes = require("./routes/paymentRoutes");
 const admin = require('./config/firebaseAdmin'); 
 const cors = require('cors');
 const http = require("http");
@@ -26,6 +28,8 @@ initializeSocket(server);
 app.use('/api/auth', authRoutes);
 app.use('/api/listing', LstRoutes);
 app.use("/api/admin", adminAuthRoute);
+app.use("/api/wishlist", wishlistRoutes)
+app.use("/api/payments", paymentRoutes);
 // Chat routes from index.js
 app.use("/api/auth", userRoutes);
 app.use("/api/messages", messageRoutes);
@@ -96,8 +100,8 @@ io.on("connection", (socket) => {
 const PORT = process.env.PORT || 5001;
 
 if (process.env.NODE_ENV !== "test") {
-  server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-}
+    server.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
+  }
 
 if (process.env.NODE_ENV === 'production') {
     require('./scheduler');

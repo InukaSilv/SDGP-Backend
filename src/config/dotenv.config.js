@@ -1,7 +1,7 @@
 const dotenv = require('dotenv');
 const path = require('path');
 
-// Load environment variables from the .env file
+// load environment variables from the .env file
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 module.exports = {

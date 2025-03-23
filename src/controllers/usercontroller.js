@@ -44,13 +44,23 @@ const updateUserProfile = async (req, res, next) => {
     }
 };
 
-const verifyPhone = async (req,res,next) =>{
-    const {phone} = req.query;
-    console.log(phone)
-}
+
+const updatePayment = async(req,res,next) =>{
+    const {action,userId} = req.body;
+    if (!action || !userId) {
+        return res.status(400).json({ message: "Action and userId are required" });
+      }
+      const user = await User.findByIdAndUpdate(
+        userId,
+        { paymentType: action },
+        { new: true } 
+      );
+      res.status(200).json({ message: "Payment updated successfully", user });
+    }
+    
 
 module.exports = {
     getUserProfile,
     updateUserProfile,
-    verifyPhone
+    updatePayment
 };

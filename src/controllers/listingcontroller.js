@@ -21,28 +21,6 @@ console.log("Socket initialized")
   })
 }
 
-// @desc    Get all listings
-// @route   GET /api/listings
-// @access  Public
-const getAllListings = async (req, res, next) => {
-  try {
-    let listings;
-    if (req.user && req.user.role === "landlord") {
-      // If the user is a landlord, return only their listings
-      listings = await Listing.find({ landlord: req.user._id }).populate(
-        "landlord",
-        "firstName lastName email"
-      );
-    } else {
-      // If the user is a student or not logged in, return all listings
-      listings = await Listing.find().populate("landlord", "firstName lastName email");
-    }
-    res.json(listings);
-  } catch (err) {
-    next(err);
-  }
-};
-
 // @desc    Create a new listing
 // @route   POST /api/listings
 // @access  Private (landlords only)
@@ -174,6 +152,7 @@ const addslots = async (req, res) => {
 
 // Retrieving property based on location and filters
 const getListing = async (req, res) => {
+  console.log("came here")
   try {
     let {
       lat,
@@ -219,37 +198,46 @@ const getListing = async (req, res) => {
       query.housingType = { $in: housingTypesArray };
     }
 
-    if (roomTypes && roomTypes.length > 0) {
-      const roomTypesArray = Array.isArray(roomTypes) 
-        ? roomTypes 
-        : [roomTypes];
-      
+    if (selectedRoomType && selectedRoomType.length > 0) {
+      const roomTypesArray = Array.isArray(selectedRoomType) 
+        ? selectedRoomType 
+        : [selectedRoomType];
       const roomTypeConditions = roomTypesArray.map(type => {
-        const field = type.toLowerCase().replace(' ', '') + 'Room';
-        return { [`roomTypes.${field}`]: { $gt: 0 } };
-      });
-      
+        if (type === 'Single') {
+          return { 'roomTypes.singleRoom': { $gt: 0 } };
+        } else if (type === 'Double') {
+          return { 'roomTypes.doubleRoom': { $gt: 0 } };
+        }
+        return null;
+      }).filter(condition => condition !== null); 
       if (roomTypeConditions.length > 0) {
         query.$or = roomTypeConditions;
       }
     }
 
-    if (facilities && facilities.length > 0) {
-      const facilitiesArray = Array.isArray(facilities) 
-        ? facilities 
-        : [facilities];
+    if (selectedFacility && selectedFacility.length > 0) {
+      const facilitiesArray = Array.isArray(selectedFacility) 
+        ? selectedFacility 
+        : [selectedFacility];
       query.facilities = { $all: facilitiesArray };
     }
 
     let sortOptions = {};
-    if (sortBy) {
-      switch (sortBy) {
+    if (selectedOption) {
+      switch (selectedOption) {
         case 'Price: High to Low':
           sortOptions = { price: -1 };
           break;
         case 'Price: Low to High':
           sortOptions = { price: 1 };
           break; 
+        case 'Date: Oldest on Top':
+          sortOptions = { createdAt: -1 };
+          break;
+        case 'Date: Newest on Top':
+          sortOptions = { createdAt: 1 };
+          break;
+          
       }
     }
 
@@ -263,9 +251,10 @@ const getListing = async (req, res) => {
     
     const ads = await Listing
       .find(query)
-      .sort(sortOptions)
+      .sort({ boostStatus: -1, ...sortOptions })
       .populate('landlord', 'firstName lastName email phone profilePhoto'); 
 
+      
     res.status(200).json(ads);
 
   } catch (error) {
@@ -324,101 +313,7 @@ const checkRevieweElig = async (req, res, next) => {
   }
 };
 
-
-
-// @desc    Update a listing
-// @route   PUT /api/listings/:id
-// @access  Private (landlords only)
-// const updateListing = async (req, res, next) => {
-//   try {
-//     const {
-//       title,
-//       description,
-//       facilities,
-//       contact,
-//       price,
-//       singleRoom,
-//       doubleRoom,
-//       removeImages = [],
-//       imageUrls = [],
-//       residents, // Maximum number of slots
-//       currentResidents, // Number of students currently living there
-//     } = req.body;
-
-//     const property = await Listing.findOne({ _id: req.body.propertyId });
-
-//     if (!property) {
-//       return res.status(404).json({ message: "Listing not found" });
-//     }
-
-//     // Validate currentResidents does not exceed residents
-//     if (currentResidents && currentResidents > residents) {
-//       return res.status(400).json({ message: "Current residents cannot exceed maximum residents" });
-//     }
-
-//     // Update listing fields
-//     property.title = title || property.title;
-//     property.description = description || property.description;
-//     property.facilities = facilities || property.facilities;
-//     property.contact = contact || property.contact;
-//     property.price = price || property.price;
-//     property.roomTypes.singleRoom = singleRoom || property.roomTypes.singleRoom;
-//     property.roomTypes.doubleRoom = doubleRoom || property.roomTypes.doubleRoom;
-//     property.residents = residents || property.residents;
-//     property.currentResidents = currentResidents || property.currentResidents;
-
-//     // Handle image updates
-//     if (removeImages.length > 0) {
-//       property.images = property.images.filter((img) => !removeImages.includes(img));
-//     }
-
-//     if (req.imageUrls && req.imageUrls.length > 0) {
-//       property.images = [...property.images, ...req.imageUrls];
-//     }
-
-//     await property.save();
-
-//     // Notify wishlisted users if there's an opening
-//     if (currentResidents < residents) {
-//       await notifyWishlistedUsers(property._id);
-//     }
-
-//     res.status(200).json({ message: "Listing updated successfully", property });
-//   } catch (error) {
-//     console.log(error);
-//     next(error);
-//   }
-// };
-
-// @desc    Search listings by location
-// @route   GET /api/listings/search
-// @access  Public
-const searchListings = async (req, res, next) => {
-  const { latitude, longitude } = req.query;
-
-  if (!latitude || !longitude) {
-    return res.status(400).json({ message: "Please provide latitude and longitude" });
-  }
-
-  try {
-    const listings = await Listing.find({
-      location: {
-        $near: {
-          $geometry: {
-            type: "Point",
-            coordinates: [parseFloat(longitude), parseFloat(latitude)],
-          },
-          $maxDistance: 5000, 
-        },
-      },
-    }).populate("landlord", "firstName lastName email");
-
-    res.json(listings);
-  } catch (err) {
-    next(err);
-  }
-};
-
+// edit and update a listing
 const updateListing = async (req, res, next) =>{
   try{
   const{
@@ -481,6 +376,7 @@ const deleteListing = async (req, res, next) => {
   }
   };
 
+  // add a review to a lisiting
   const addReview = async(req,res,next) =>{
     try{
       const { rating, review, recommend, propertyId } = req.body;
@@ -514,52 +410,9 @@ const deleteListing = async (req, res, next) => {
       next(err);
     }
   }
-    // if (!listing) {
-    //   return res.status(404).json({ message: "Listing not found" });
-    // }
+  
 
-    // // Check if the logged-in user is the landlord
-    // if (listing.landlord.toString() !== req.user._id.toString()) {
-    //   return res.status(401).json({ message: "Not authorized" });
-    // }
-
-    // // Delete the listing
-    // await listing.remove();
-
-    // res.json({ message: "Listing deleted successfully" });
-
-
-
-// @desc    Update listing images
-// @route   PUT /api/listings/:id/images
-// @access  Private (landlords only)
-const updateListingImages = async (req, res, next) => {
-  try {
-    const listing = await Listing.findById(req.params.id);
-
-    if (!listing) {
-      return res.status(404).json({ message: "Listing not found" });
-    }
-
-    // Check if the logged-in user is the landlord
-    if (listing.landlord.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: "Not authorized" });
-    }
-
-    // Upload new images to Azure Blob Storage (handled in the route)
-    const newImageUrls = req.imageUrls; // Assume image URLs are added to req object by the route
-
-    // Add new images to the listing
-    listing.images = [...listing.images, ...newImageUrls];
-    await listing.save();
-
-    res.json({ message: "Listing images updated successfully", listing });
-  } catch (err) {
-    next(err);
-  }
-};
-
-
+// get owner details
 const getOwner = async (req, res, next) => {
   try {
     const { propertyId } = req.query;
@@ -572,6 +425,7 @@ const getOwner = async (req, res, next) => {
   }
 };
 
+// get reviews and similar properties
 const getReviews = async (req, res, next) => {
   try {
     const { reviews, id } = req.query;
@@ -619,6 +473,7 @@ const getReviews = async (req, res, next) => {
   }
 };
 
+// uploading profile profilePhoto
 const uploadDp = async (req, res, next) => {
   const user = await User.findById(req.body.user); 
   if (!user) {
@@ -630,54 +485,15 @@ const uploadDp = async (req, res, next) => {
   res.status(200).send({ message: "Profile photo updated successfully.",user });
 };
 
-const adWishList = async (req, res, next) => {
-  try {
-    const { userId, adId } = req.body;
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    const existingWish = await PremiumWishList.findOne({ user: userId, property: adId });
-    if (existingWish) {
-      await existingWish.deleteOne();
-      return res.status(201).json({ message: "Removed from wishlist", status: false });
-    }
-    const newWish = new PremiumWishList({
-      user: userId,
-      property: adId,
-      email: user.email,
-    });
-    await newWish.save();
-    res.status(201).json({ message: "Added to wishlist successfully", status: true });
-  } catch (error) {
-    console.error("Error adding to wishlist:", error);
-    res.status(500).json({ message: "Server error" });
-  }
-};
 
-const getWishList = async (req, res, next) => {
-  const { id } = req.query;
-  if (!id) {
-    return res.status(400).json({ error: "User ID is required" });
-  }
-  try {
-    const wishlist = await PremiumWishList.find({ user: id });
-    if (wishlist.length === 0) {
-      return res.status(200).json([]);
-    }
-    const propertyIds = wishlist.map((item) => item.property);
-    const listings = await Listing.find({ _id: { $in: propertyIds } });
-    res.status(200).json(listings);
-  } catch (error) {
-    console.error("Error fetching wishlist:", error);
-    res.status(500).json({ error: "Server error" });
-  }
-};
 
-// Track a view
+// Track a view 
+// when a user clicks on a listing it takes the record
 const trackView = async (req, res) => {
+  console.log("came here to check time")
   try {
     const { listingId, duration } = req.body;
+    console.log(listingId,duration)
     const listing = await Listing.findById(listingId);
 
     if (!listing) {
@@ -694,6 +510,7 @@ const trackView = async (req, res) => {
     res.status(500).json({ error: 'Server Error' });
   }
 };
+
 
 // Track a contact click
 const trackContactClick = async (req, res) => {
@@ -716,14 +533,26 @@ const trackContactClick = async (req, res) => {
   }
 };
 
+// changing boostad status
+const boostAd = async (req,res,next) =>{
+  const {adId} = req.body;
+  console.log(adId);
+  const listing = await Listing.findById(adId);
+  console.log(listing);
+  if(listing.boostStatus === true){
+    listing.boostStatus = false;
+  }else{
+    listing.boostStatus = true;
+  }
+  await listing.save();
+  res.status(200).json({message:"Ad boosted successfully"});
+}
+
 
 module.exports = {
-  getAllListings,
   createListing,
   updateListing,
-  searchListings,
   deleteListing,
-  updateListingImages,
   addReview,
   searchPersonalListing,
   addslots,
@@ -734,8 +563,7 @@ module.exports = {
   getOwner,
   getReviews,
   uploadDp,
-  adWishList,
-  getWishList,
   trackView,
-  trackContactClick
+  trackContactClick,
+  boostAd,
 };
