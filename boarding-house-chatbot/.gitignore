@@ -7,7 +7,7 @@ __pycache__/
 venv/
 
 # Ignore environment variables file
-.env
+
 
 # Ignore Flask instance folder (if any)
 instance/

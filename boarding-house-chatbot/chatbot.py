@@ -8,9 +8,14 @@ from dotenv import load_dotenv
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure
 from flask_socketio import SocketIO
+import logging
 
 # Load environment variables
 load_dotenv()
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 # Enable CORS for all routes
@@ -156,28 +161,16 @@ chatbot = BoardingHouseChatbot()
 @app.route('/chat', methods=['POST', 'OPTIONS'])
 @app.route('/api/chat', methods=['POST', 'OPTIONS'])
 def chat():
-    # Handle preflight OPTIONS request
     if request.method == 'OPTIONS':
         return jsonify({}), 200
-        
-    data = request.json 
-    print(f"Received chat request: {data}")
-    
-    # Support both naming conventions (Express and Flask)
+    data = request.json
+    logger.info(f"Received chat request: {data}")
     user_id = data.get('user_id') or data.get('userId')
     message = data.get('message')
     conversation_id = data.get('conversation_id') or data.get('conversationId')
-    
     if not all([user_id, message, conversation_id]):
         return jsonify({'error': 'Missing required fields'}), 400
-    
-    result = chatbot.process_user_message(
-        user_id,
-        message,
-        conversation_id
-    )
-    
-    # Emit the message via Socket.IO
+    result = chatbot.process_user_message(user_id, message, conversation_id)
     socketio.emit('chat_response', {
         'user_id': user_id,
         'message': message,
@@ -185,8 +178,7 @@ def chat():
         'conversation_id': conversation_id,
         'timestamp': datetime.now().isoformat()
     })
-    
-    print(f"Sending response: {result}")
+    logger.info(f"Sending response: {result}")
     return jsonify(result)
 
 # Socket.IO event handlers
@@ -229,5 +221,8 @@ def health():
 
 if __name__ == '__main__':
     port = int(os.getenv('PORT', 5001))
+    
+    host = os.getenv('HOST', '0.0.0.0')
+    logger.info(f"Starting chatbot service on {host}:{port}")
     # Use socketio.run instead of app.run to enable WebSocket support
-    socketio.run(app, host='0.0.0.0', port=port, debug=True, allow_unsafe_werkzeug=True)
+    socketio.run(app, host=host, port=port, debug=True, allow_unsafe_werkzeug=True)
