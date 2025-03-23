@@ -13,7 +13,7 @@ const paymentRoutes = require("./routes/paymentRoutes");
 const app = express();
 
 // Stripe requires raw body parsing for webhooks
-app.use("/api/payments/webhook", express.raw({ type: "application/json" }));
+app.post("/api/payments/handleWebhook", express.raw({ type: "application/json" }), handleWebhook);
 
 app.use(express.json());
 app.use(cors());
