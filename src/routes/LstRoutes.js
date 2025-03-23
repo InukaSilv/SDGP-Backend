@@ -98,14 +98,17 @@ router.post("/post-review",protect,async(req, res, next) =>{
     addReview(req,res,next);
 })
 
+// get owner details
 router.get("/getowner",async(req,res,next) =>{
     getOwner(req,res,next);
 })
 
+// get reviews and similar properties
 router.get("/get-reviews", async(req,res,next)=>{
     getReviews(req,res,next);
 })
 
+// upload profile photo
 router.put("/uploadDp",upload.single("image"),async(req,res,next) =>{
     try {
       if (!req.file) {
@@ -124,15 +127,17 @@ router.put("/uploadDp",upload.single("image"),async(req,res,next) =>{
    
 })
 
-
+// track view
 router.post('/track-view', async (req, res, next) => {
   trackView(req, res);
 });
 
+// track contact click
 router.post('/track-contact-click', async (req, res, next) => {
   trackContactClick(req, res);
 });
 
+// change boost ad status
 router.put("/boost-ad",async(req,res,next)=>{
     console.log("came here");
     boostAd(req,res,next);

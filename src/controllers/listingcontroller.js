@@ -21,28 +21,6 @@ console.log("Socket initialized")
   })
 }
 
-// @desc    Get all listings
-// @route   GET /api/listings
-// @access  Public
-const getAllListings = async (req, res, next) => {
-  try {
-    let listings;
-    if (req.user && req.user.role === "landlord") {
-      // If the user is a landlord, return only their listings
-      listings = await Listing.find({ landlord: req.user._id }).populate(
-        "landlord",
-        "firstName lastName email"
-      );
-    } else {
-      // If the user is a student or not logged in, return all listings
-      listings = await Listing.find().populate("landlord", "firstName lastName email");
-    }
-    res.json(listings);
-  } catch (err) {
-    next(err);
-  }
-};
-
 // @desc    Create a new listing
 // @route   POST /api/listings
 // @access  Private (landlords only)
@@ -335,101 +313,7 @@ const checkRevieweElig = async (req, res, next) => {
   }
 };
 
-
-
-// @desc    Update a listing
-// @route   PUT /api/listings/:id
-// @access  Private (landlords only)
-// const updateListing = async (req, res, next) => {
-//   try {
-//     const {
-//       title,
-//       description,
-//       facilities,
-//       contact,
-//       price,
-//       singleRoom,
-//       doubleRoom,
-//       removeImages = [],
-//       imageUrls = [],
-//       residents, // Maximum number of slots
-//       currentResidents, // Number of students currently living there
-//     } = req.body;
-
-//     const property = await Listing.findOne({ _id: req.body.propertyId });
-
-//     if (!property) {
-//       return res.status(404).json({ message: "Listing not found" });
-//     }
-
-//     // Validate currentResidents does not exceed residents
-//     if (currentResidents && currentResidents > residents) {
-//       return res.status(400).json({ message: "Current residents cannot exceed maximum residents" });
-//     }
-
-//     // Update listing fields
-//     property.title = title || property.title;
-//     property.description = description || property.description;
-//     property.facilities = facilities || property.facilities;
-//     property.contact = contact || property.contact;
-//     property.price = price || property.price;
-//     property.roomTypes.singleRoom = singleRoom || property.roomTypes.singleRoom;
-//     property.roomTypes.doubleRoom = doubleRoom || property.roomTypes.doubleRoom;
-//     property.residents = residents || property.residents;
-//     property.currentResidents = currentResidents || property.currentResidents;
-
-//     // Handle image updates
-//     if (removeImages.length > 0) {
-//       property.images = property.images.filter((img) => !removeImages.includes(img));
-//     }
-
-//     if (req.imageUrls && req.imageUrls.length > 0) {
-//       property.images = [...property.images, ...req.imageUrls];
-//     }
-
-//     await property.save();
-
-//     // Notify wishlisted users if there's an opening
-//     if (currentResidents < residents) {
-//       await notifyWishlistedUsers(property._id);
-//     }
-
-//     res.status(200).json({ message: "Listing updated successfully", property });
-//   } catch (error) {
-//     console.log(error);
-//     next(error);
-//   }
-// };
-
-// @desc    Search listings by location
-// @route   GET /api/listings/search
-// @access  Public
-const searchListings = async (req, res, next) => {
-  const { latitude, longitude } = req.query;
-
-  if (!latitude || !longitude) {
-    return res.status(400).json({ message: "Please provide latitude and longitude" });
-  }
-
-  try {
-    const listings = await Listing.find({
-      location: {
-        $near: {
-          $geometry: {
-            type: "Point",
-            coordinates: [parseFloat(longitude), parseFloat(latitude)],
-          },
-          $maxDistance: 5000, 
-        },
-      },
-    }).populate("landlord", "firstName lastName email");
-
-    res.json(listings);
-  } catch (err) {
-    next(err);
-  }
-};
-
+// edit and update a listing
 const updateListing = async (req, res, next) =>{
   try{
   const{
@@ -492,6 +376,7 @@ const deleteListing = async (req, res, next) => {
   }
   };
 
+  // add a review to a lisiting
   const addReview = async(req,res,next) =>{
     try{
       const { rating, review, recommend, propertyId } = req.body;
@@ -525,52 +410,9 @@ const deleteListing = async (req, res, next) => {
       next(err);
     }
   }
-    // if (!listing) {
-    //   return res.status(404).json({ message: "Listing not found" });
-    // }
+  
 
-    // // Check if the logged-in user is the landlord
-    // if (listing.landlord.toString() !== req.user._id.toString()) {
-    //   return res.status(401).json({ message: "Not authorized" });
-    // }
-
-    // // Delete the listing
-    // await listing.remove();
-
-    // res.json({ message: "Listing deleted successfully" });
-
-
-
-// @desc    Update listing images
-// @route   PUT /api/listings/:id/images
-// @access  Private (landlords only)
-const updateListingImages = async (req, res, next) => {
-  try {
-    const listing = await Listing.findById(req.params.id);
-
-    if (!listing) {
-      return res.status(404).json({ message: "Listing not found" });
-    }
-
-    // Check if the logged-in user is the landlord
-    if (listing.landlord.toString() !== req.user._id.toString()) {
-      return res.status(401).json({ message: "Not authorized" });
-    }
-
-    // Upload new images to Azure Blob Storage (handled in the route)
-    const newImageUrls = req.imageUrls; // Assume image URLs are added to req object by the route
-
-    // Add new images to the listing
-    listing.images = [...listing.images, ...newImageUrls];
-    await listing.save();
-
-    res.json({ message: "Listing images updated successfully", listing });
-  } catch (err) {
-    next(err);
-  }
-};
-
-
+// get owner details
 const getOwner = async (req, res, next) => {
   try {
     const { propertyId } = req.query;
@@ -583,6 +425,7 @@ const getOwner = async (req, res, next) => {
   }
 };
 
+// get reviews and similar properties
 const getReviews = async (req, res, next) => {
   try {
     const { reviews, id } = req.query;
@@ -630,6 +473,7 @@ const getReviews = async (req, res, next) => {
   }
 };
 
+// uploading profile profilePhoto
 const uploadDp = async (req, res, next) => {
   const user = await User.findById(req.body.user); 
   if (!user) {
@@ -689,6 +533,7 @@ const trackContactClick = async (req, res) => {
   }
 };
 
+// changing boostad status
 const boostAd = async (req,res,next) =>{
   const {adId} = req.body;
   console.log(adId);
@@ -705,12 +550,9 @@ const boostAd = async (req,res,next) =>{
 
 
 module.exports = {
-  getAllListings,
   createListing,
   updateListing,
-  searchListings,
   deleteListing,
-  updateListingImages,
   addReview,
   searchPersonalListing,
   addslots,

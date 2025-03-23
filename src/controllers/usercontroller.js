@@ -44,10 +44,6 @@ const updateUserProfile = async (req, res, next) => {
     }
 };
 
-const verifyPhone = async (req,res,next) =>{
-    const {phone} = req.query;
-    console.log(phone)
-}
 
 const updatePayment = async(req,res,next) =>{
     const {action,userId} = req.body;
@@ -66,6 +62,5 @@ const updatePayment = async(req,res,next) =>{
 module.exports = {
     getUserProfile,
     updateUserProfile,
-    verifyPhone,
     updatePayment
 };
