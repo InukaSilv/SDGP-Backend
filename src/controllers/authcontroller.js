@@ -2,8 +2,7 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const { generateToken } = require('../utils/jwUtils');
 const admin = require('../config/firebaseAdmin'); // Firebase Admin SDK
-const { getAuth } = require("firebase-admin/auth");
-const { uploadImage } = require('../config/azureStorage');
+const ToReview = require('../models/ToReview');
 
 
 /**
@@ -149,6 +148,25 @@ exports.socialAuth = async (profile, provider) => {
         throw new Error(`Social authentication failed: ${error.message}`);
     }
 };
+
+exports.uploadId = async (req,res,next) =>{
+    const imageUrls = req.imageUrls;
+    const {id}=req.body;
+    const user  = await User.findById(id);
+    user.IdVerificationStatus = "Pending";
+    const toReview = new ToReview({
+        user:id,
+        firstName:user.firstName,
+        images:imageUrls
+    })
+    await user.save();
+    await toReview.save();
+    return res.status(201).json({ 
+        message: "User verification ID added successfully",
+        user,
+      });
+    
+}
 
 
 

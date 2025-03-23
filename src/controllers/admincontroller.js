@@ -1,8 +1,7 @@
 const Listing = require("../models/Listing");
 const EligibleUser = require("../models/EligibleUser");
-const Review = require("../models/Reviews")
+const toReview = require("../models/ToReview");
 const User = require("../models/User");
-const toReview = require("../models/ToReview.js");
 const { deleteImage } = require("../config/azureStorage");
 const { createVerify } = require("crypto");
 
@@ -73,11 +72,12 @@ const getVerifies = async (req,res,next) =>{
 const verify = async (req, res, next) => {
     try {
       const { id } = req.body;
+   
       const rev = await toReview.findById(id);
       if (!rev) {
         return res.status(404).json({ message: "Review not found" });
       }
-      const user = await User.findById(rev.user);
+      const user = await User.findById({_id:rev.user});
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
@@ -85,6 +85,7 @@ const verify = async (req, res, next) => {
       user.isIdVerified = true;
       user.IDimages.push(...rev.images);
       await user.save();
+      console.log(user);
       await rev.deleteOne(); 
       res.status(200).json({ message: "Verified successfully" }); 
     } catch (error) {
@@ -119,6 +120,8 @@ const reject = async (req,res,next) =>{
 
 }
 
+
+
 module.exports = {
 getData,
 getUserData,
@@ -127,4 +130,5 @@ getAdsData,
 getVerifies,
 verify,
 reject,
+
 };

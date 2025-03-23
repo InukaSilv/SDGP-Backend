@@ -1,5 +1,5 @@
 const express = require("express");
-const { createListing, searchPersonalListing, addslots, getListing, updateListing,deleteListing,addEligibleUser,checkRevieweElig, addReview,getOwner,getReviews,uploadDp,trackView,trackContactClick } = require("../controllers/listingcontroller");
+const { createListing, searchPersonalListing, addslots, getListing, updateListing,deleteListing,addEligibleUser,checkRevieweElig, addReview,getOwner,getReviews,uploadDp,trackView,trackContactClick,boostAd } = require("../controllers/listingcontroller");
 const multer = require("multer");
 const { uploadImage,deleteImage } = require("../config/azureStorage");
 const { protect } = require("../middlewares/authMiddleware");
@@ -132,5 +132,10 @@ router.post('/track-view', async (req, res, next) => {
 router.post('/track-contact-click', async (req, res, next) => {
   trackContactClick(req, res);
 });
+
+router.put("/boost-ad",async(req,res,next)=>{
+    console.log("came here");
+    boostAd(req,res,next);
+  })
 
 module.exports = router;

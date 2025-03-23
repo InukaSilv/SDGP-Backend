@@ -689,6 +689,20 @@ const trackContactClick = async (req, res) => {
   }
 };
 
+const boostAd = async (req,res,next) =>{
+  const {adId} = req.body;
+  console.log(adId);
+  const listing = await Listing.findById(adId);
+  console.log(listing);
+  if(listing.boostStatus === true){
+    listing.boostStatus = false;
+  }else{
+    listing.boostStatus = true;
+  }
+  await listing.save();
+  res.status(200).json({message:"Ad boosted successfully"});
+}
+
 
 module.exports = {
   getAllListings,
@@ -709,4 +723,5 @@ module.exports = {
   uploadDp,
   trackView,
   trackContactClick,
+  boostAd,
 };
