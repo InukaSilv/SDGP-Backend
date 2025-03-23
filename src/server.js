@@ -49,7 +49,7 @@ app.use((err, req, res, next) => {
     res.status(err.statusCode || 500).json({ success: false, message: err.message || 'Server Error' });
 });
 
-// Set up Socket.io for chat from index.js
+// Set up Socket.io for chat
 const io = socket(server, {
     cors: {
       origin: "http://localhost:5173",
