@@ -19,7 +19,7 @@ const app = express();
 const server = http.createServer(app);
 
 app.post(
-  "/api/payments/handleWebhook",
+  "/api/payments/webhook",
   express.raw({ type: "application/json" }),
   handleWebhook
 );
