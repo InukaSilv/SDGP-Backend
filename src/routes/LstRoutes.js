@@ -43,6 +43,7 @@ router.put("/add-slot", protect, async(req,res,next)=>{
 addslots(req,res);
 })
 
+// retrieving property based on location and filters
 router.get("/get-listing", async(req, res, next)=>{
     getListing(req,res);
 })
