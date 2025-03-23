@@ -1,4 +1,4 @@
-const User = require("../models/userChatModel");
+const User = require("../models/User");
 
 
 // module.exports.register = async (req,res,next) => {

@@ -52,10 +52,11 @@ app.use((err, req, res, next) => {
 // Set up Socket.io for chat from index.js
 const io = socket(server, {
     cors: {
-        origin: "http://localhost:5173",
-        credentials: true,
-    }
-});
+      origin: "http://localhost:5173",
+      credentials: true
+    },
+    transports: ['polling']
+  });
 
 global.onlineUsers = new Map();
 
