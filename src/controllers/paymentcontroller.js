@@ -76,7 +76,7 @@ const createCheckoutSession = asyncHandler(async (req, res) => {
             mode: "subscription",
             line_items: [
                 {
-                    price: PRICES[`${role.toLowerCase()}_${planType.toLowerCase()}`], // Dynamically select the correct price
+                    price: priceId ,// Dynamically select the correct price
                     quantity: 1,
                 },
             ],
@@ -112,188 +112,191 @@ const handleWebhook = asyncHandler(async (req, res) => {
             sig, 
             process.env.STRIPE_WEBHOOK_SECRET
         );
-        console.log("Webhook received:", event.type);
+        console.log("Webhook received:", event.type)
+        
+        // Handle successful payment    
+        if (event.type === "checkout.session.completed") {
+            const session = event.data.object;
+            const { userId, planType, planDuration, role } = session.metadata;
 
+            if (!userId || !planType || !planDuration || !role) {
+                console.error("Missing metadata fields in session object.");
+                return res.status(400).json({ error: "Invalid metadata in webhook payload" });
+            }
+
+            // Get amount and currency from the session
+            const amount = session.amount_total / 100; // Convert from cents to dollars/rupees
+            const currency = session.currency;
+
+            // Check if user exists
+            const user = await User.findById(userId);
+            if (!user) {
+                console.error("User ID is missing in metadata!");
+                return res.status(404).json({ error: "User not found" });
+            }
+
+            await User.findByIdAndUpdate(userId, { isPremium: true });
+            // Calculate subscription expiry date
+            let expiryDate = new Date();
+            const activePayment = await Payment.findOne({ 
+                userId, 
+                status: "success",
+                subscriptionExpiry: {$gt: new Date()}
+            });
+
+            // If there's an active subscription, extend from its expiry date
+            if (activePayment && activePayment.planType === "gold" && planType === "platinum") {
+                expiryDate = new Date();
+                logger.info(`Extending existing subscription for user ${userId}`);
+            }
+
+            // If downgrading from Platinum to Gold, schedule Gold for after Platinum expires
+            else if (activePayment && activePayment.planType === "platinum" && planType === "gold") {
+                expiryDate = new Date(activePayment.subscriptionExpiry);
+                logger.info(`User ${userId} scheduled downgrade from Platinum to Gold.`);
+            }
+
+            const durationDays = planDuration === "monthly" ? 30 : 365;
+            expiryDate.setDate(expiryDate.getDate() + durationDays);
+
+            // If no payment record exists, create one
+            const newPayment = new Payment({
+                userId,
+                userRole: role,
+                planType,
+                planDuration,
+                amount,
+                currency,
+                status: "success",
+                transactionId: session.id,
+                boughtDate: new Date(),
+                subscriptionExpiry: expiryDate, 
+            });
+
+            await newPayment.save();
+            logger.info(`Payment initiated: ${user.email} - ${planType} - ${role} - ${currency} ${amount}`);
+        
+            // Update user's premium status
+            await User.findByIdAndUpdate(userId, { isPremium: true });
+            logger.info(`User upgraded to Premium: ${userId} | Expiry: ${expiryDate}`);
+            
+            // Send email confirmation with appropriate plan name
+            const planName = planType === "gold" ? "Gold " : "Platinum ";
+            
+            const PLAN_DETAILS = {
+                student: {
+                    gold:{features: [
+                        "Unlimited Property Searches & Filters ",
+                        "Ad-Free Experience ",
+                        "Priority Booking ",
+                        "Direct Chat with Landlords",
+                        "Early Access to New Listings ",
+                        "Tenant Rating System"
+                    ]},
+                    platinum:{features: [
+                        "Unlimited Property Searches & Filters",
+                        "Ad-Free Experience ",
+                        "Priority Booking ",
+                        "Direct Chat with Landlords",
+                        "Early Access to New Listings",
+                        "Tenant Rating System",
+                        "Exclusive Rent Discounts"
+                    ]},
+                },
+                    landlord: {
+                    gold:{features: [
+                        "Unlimited Property Listings ",
+                        "Boosted Ads",
+                        "Direct Chat with Tenants ",
+                        "Verified Badge",
+                        "roperty Analytics ",
+                        "Featured Listing on Homepage",     
+                    ]},
+                    platinum:{features:[
+                        "Unlimited Property Listings ",
+                        "Boosted Ads",
+                        "Direct Chat with Tenants ",
+                        "Verified Badge",
+                        "roperty Analytics ",
+                        "Featured Listing on Homepage",
+                        "Discounted Renewal "
+                    ]}
+                }
+            };
+            
+            const planDurationText = planDuration === "monthly" ? "Monthly" : "Annual";
+
+            
+            const roleName = role.charAt(0).toUpperCase() + role.slice(1); // Capitalize first letter
+            sendEmail(user.email, `${roleName} ${planName} Subscription Activated`, `
+                <p>Dear ${user.firstName},</p>
+                p>Your <strong>${roleName} ${planName} ${planDurationText}</strong> subscription is now active.</p>
+                <p>Subscription Expiry Date: ${new Date(newPayment.subscriptionExpiry).toDateString()}</p>
+                <p>Features included:</p>
+                <ul>
+                    ${PLAN_DETAILS[role][planType].features.map(feature => `<li>${feature}</li>`).join('')}
+                </ul>
+                <p>Thank you for your support!</p>
+                <p>Best Regards, <br/> RiVVE Team</p>
+            `);
+            logger.info(`Email sent to ${user.email} | Payment ID: ${session.id}`);   
+        }  
+
+//Handle failed payment        
+        else if (event.type === "payment_intent.payment_failed") {
+            const paymentIntent = event.data.object;
+            const payment = await Payment.findOne({ transactionId: paymentIntent.id });
+            
+            if (payment) {
+                payment.status = "failed";
+                await payment.save();
+                logger.warn(`Payment failed: ${paymentIntent.id}`);
+                
+                // Notify user about failed payment
+                const user = await User.findById(payment.userId);
+                if (user) {
+                    sendEmail(user.email, "Payment Failed", `
+                        <p>Dear ${user.firstName},</p>
+                        <p>We're sorry, but your recent payment attempt failed.</p>
+                        <p>Please check your payment information and try again.</p>
+                        <p>If you continue to experience issues, please contact our support team.</p>
+                        <p>Best Regards, <br/> RiVVE Team</p>
+                    `);
+                    logger.info(`Payment failure email sent to ${user.email}`);
+                }
+            }
+        }
+
+// Handle subscription cancellation
+        else if (event.type === "customer.subscription.deleted") {
+            const subscription = event.data.object;
+            const payment = await Payment.findOne({ transactionId: subscription.id });
+        
+            if (payment) {
+                payment.status = "cancelled";
+                await payment.save();
+        
+                await User.findByIdAndUpdate(payment.userId, { isPremium: false });
+                logger.info(`Subscription cancelled: User ${payment.userId} downgraded.`);
+
+                // Send email notification
+                const user = await User.findById(payment.userId);
+                if (user) {
+                    sendEmail(user.email, "Subscription Cancelled", `
+                        <p>Dear ${user.firstName},</p>
+                        <p>Your subscription has been cancelled.</p>
+                        <p>If you did not request this cancellation, please contact our support team.</p>
+                        <p>Best Regards, <br/> RiVVE Team</p>
+                    `);
+                    logger.info(`Cancellation email sent to ${user.email}`);
+                }
+            }
+        }
+        res.status(200).json({ received: true });
     } catch (error) {
         console.error("webhook signature verification failed.")
         return res.status(400).json({ error: "Webhook verification failed", message: error.message });
     }
-
-    const session = event.data.object;
-    
-    // Handle successful payment    
-    if (event.type === "checkout.session.completed") {
-        const { userId, planType, planDuration, role } = session.metadata;
-
-         // Get amount and currency from the session
-        const amount = session.amount_total / 100; // Convert from cents to dollars/rupees
-        const currency = session.currency;
-
-        // Check if user exists
-        const user = await User.findById(userId);
-        if (!user) {
-            console.error("User ID is missing in metadata!");
-            return res.status(404).json({ error: "User not found" });
-        }
-
-        await User.findByIdAndUpdate(userId, { isPremium: true });
-        // Calculate subscription expiry date
-        let expiryDate = new Date();
-        const activePayment = await Payment.findOne({ 
-            userId, 
-            status: "success",
-            subscriptionExpiry: {$gt: new Date()}
-        });
-
-        // If there's an active subscription, extend from its expiry date
-        if (activePayment && activePayment.planType === "gold" && planType === "platinum") {
-            expiryDate = new Date();
-            logger.info(`Extending existing subscription for user ${userId}`);
-        }
-
-        // If downgrading from Platinum to Gold, schedule Gold for after Platinum expires
-        else if (activePayment && activePayment.planType === "platinum" && planType === "gold") {
-            expiryDate = new Date(activePayment.subscriptionExpiry);
-            logger.info(`User ${userId} scheduled downgrade from Platinum to Gold.`);
-        }
-
-        const durationDays = planDuration === "monthly" ? 30 : 365;
-        expiryDate.setDate(expiryDate.getDate() + durationDays);
-
-        // If no payment record exists, create one
-        const newPayment = new Payment({
-            userId,
-            userRole: role,
-            planType,
-            planDuration,
-            amount,
-            currency,
-            status: "success",
-            transactionId: session.id,
-            boughtDate: new Date(),
-            subscriptionExpiry: expiryDate, 
-        });
-
-        await payment.save();
-        logger.info(`Payment initiated: ${user.email} - ${planType} - ${role} - ${currency} ${amount}`);
-      
-        // Update user's premium status
-        await User.findByIdAndUpdate(userId, { isPremium: true });
-        logger.info(`User upgraded to Premium: ${userId} | Expiry: ${expiryDate}`);
-        
-        // Send email confirmation with appropriate plan name
-        const planName = planType === "gold" ? "Gold " : "Platinum ";
-        
-        const PLAN_DETAILS = {
-            student: {
-                gold:{features: [
-                    "Unlimited Property Searches & Filters ",
-                    "Ad-Free Experience ",
-                    "Priority Booking ",
-                    "Direct Chat with Landlords",
-                    "Early Access to New Listings ",
-                    "Tenant Rating System"
-                ]},
-                  platinum:{features: [
-                    "Unlimited Property Searches & Filters",
-                    "Ad-Free Experience ",
-                    "Priority Booking ",
-                    "Direct Chat with Landlords",
-                    "Early Access to New Listings",
-                    "Tenant Rating System",
-                    "Exclusive Rent Discounts"
-                ]},
-            },
-                landlord: {
-                  gold:{features: [
-                    "Unlimited Property Listings ",
-                    "Boosted Ads",
-                    "Direct Chat with Tenants ",
-                    "Verified Badge",
-                    "roperty Analytics ",
-                    "Featured Listing on Homepage",     
-                ]},
-                  platinum:{features:[
-                    "Unlimited Property Listings ",
-                    "Boosted Ads",
-                    "Direct Chat with Tenants ",
-                    "Verified Badge",
-                    "roperty Analytics ",
-                    "Featured Listing on Homepage",
-                    "Discounted Renewal "
-                ]}
-            }
-        };
-        
-        const planDurationText = planDuration === "monthly" ? "Monthly" : "Annual";
-
-        
-        const roleName = role.charAt(0).toUpperCase() + role.slice(1); // Capitalize first letter
-        sendEmail(user.email, `${roleName} ${planName} Subscription Activated`, `
-            <p>Dear ${user.firstName},</p>
-            p>Your <strong>${roleName} ${planName} ${planDurationText}</strong> subscription is now active.</p>
-            <p>Subscription Expiry Date: ${new Date(payment.subscriptionExpiry).toDateString()}</p>
-            <p>Features included:</p>
-            <ul>
-                ${PLAN_DETAILS[role][planType].features.map(feature => `<li>${feature}</li>`).join('')}
-            </ul>
-            <p>Thank you for your support!</p>
-            <p>Best Regards, <br/> RiVVE Team</p>
-        `);
-        logger.info(`Email sent to ${user.email} | Payment ID: ${session.id}`);
-        
-    }     
-//Handle failed payment        
-    else if (event.type === "payment_intent.payment_failed") {
-        const paymentIntent = event.data.object;
-        const payment = await Payment.findOne({ transactionId: paymentIntent.id });
-        
-        if (payment) {
-            payment.status = "failed";
-            await payment.save();
-            logger.warn(`Payment failed: ${paymentIntent.id}`);
-            
-            // Notify user about failed payment
-            const user = await User.findById(payment.userId);
-            if (user) {
-                sendEmail(user.email, "Payment Failed", `
-                    <p>Dear ${user.firstName},</p>
-                    <p>We're sorry, but your recent payment attempt failed.</p>
-                    <p>Please check your payment information and try again.</p>
-                    <p>If you continue to experience issues, please contact our support team.</p>
-                    <p>Best Regards, <br/> RiVVE Team</p>
-                `);
-                logger.info(`Payment failure email sent to ${user.email}`);
-            }
-        }
-    }
-
-    // Handle subscription cancellation
-    else if (event.type === "customer.subscription.deleted") {
-        const subscription = event.data.object;
-        const payment = await Payment.findOne({ transactionId: subscription.id });
-    
-        if (payment) {
-            payment.status = "cancelled";
-            await payment.save();
-    
-            await User.findByIdAndUpdate(payment.userId, { isPremium: false });
-            logger.info(`Subscription cancelled: User ${payment.userId} downgraded.`);
-
-            // Send email notification
-            const user = await User.findById(payment.userId);
-            if (user) {
-                sendEmail(user.email, "Subscription Cancelled", `
-                    <p>Dear ${user.firstName},</p>
-                    <p>Your subscription has been cancelled.</p>
-                    <p>If you did not request this cancellation, please contact our support team.</p>
-                    <p>Best Regards, <br/> RiVVE Team</p>
-                `);
-                logger.info(`Cancellation email sent to ${user.email}`);
-            }
-        }
-    }
-    res.status(200).json({ received: true });
 });
 
 
@@ -374,6 +377,9 @@ const cancelSubscription = asyncHandler(async (req, res) => {
             return res.status(404).json({ error: "No active subscription found" });
         }
         
+        const stripeSubscriptionId = activePayment.transactionId;
+        await stripe.subscriptions.del(stripeSubscriptionId);
+
         // Update payment status
         activePayment.status = "cancelled";
         await activePayment.save();
