@@ -110,4 +110,19 @@ router.put('/profile', protect, async (req, res) => {
     }
 });
 
+
+// Get all users for chat (except current user)
+router.get('/allusers/:id', protect, async (req, res) => {
+    try {
+        // Find all users except the current user
+        const users = await User.find({ _id: { $ne: req.params.id } })
+            .select('firstName lastName email profilePhoto role _id');
+        
+        return res.json(users);
+    } catch (err) {
+        console.error('Error fetching users for chat:', err);
+        return res.status(500).json({ message: 'Server error' });
+    }
+});
+
 module.exports = router;
