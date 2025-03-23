@@ -14,6 +14,7 @@ const cors = require('cors');
 const http = require("http");
 const socket = require("socket.io");
 const {initializeSocket} = require("./controllers/listingcontroller");
+const chatbotRoutes = require('./routes/chatbotRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -40,6 +41,7 @@ app.use("/api/payments", paymentRoutes);
 // Chat routes from index.js
 app.use("/api/auth", userRoutes);
 app.use("/api/messages", messageRoutes);
+app.use(chatbotRoutes);
 
 // Health check endpoint
 app.get("/api/health-check", (req, res) => {
