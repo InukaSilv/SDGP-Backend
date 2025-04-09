@@ -65,7 +65,9 @@ app.use((err, req, res, next) => {
 // Set up Socket.io for chat
 const io = socket(server, {
     cors: {
-      origin: "http://localhost:5173",
+      origin: process.env.NODE_ENV === 'production' 
+      ? "https://www.rivvelk.com" 
+      : "http://localhost:5173",
       credentials: true
     },
     transports: ['polling']
