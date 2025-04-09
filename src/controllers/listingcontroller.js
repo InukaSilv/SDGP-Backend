@@ -71,8 +71,8 @@ const createListing = async (req, res, next) => {
         doubleRoom: parseInt(doubleRoom, 10),
       },
       facilities: JSON.parse(facilities),
-      residents: parseInt(residents, 10), // Maximum number of slots
-      currentResidents: 0, // Initialize to 0
+      residents: parseInt(residents, 100), // Maximum number of slots
+      currentResidents: parseInt(residents, 100), // Initialize to 0
       contact,
       price: parseFloat(price),
       address,
@@ -152,7 +152,6 @@ const addslots = async (req, res) => {
 
 // Retrieving property based on location and filters
 const getListing = async (req, res) => {
-  console.log("came here")
   try {
     let {
       lat,

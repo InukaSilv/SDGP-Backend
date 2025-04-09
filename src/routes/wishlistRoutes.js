@@ -10,11 +10,11 @@ router.post("/adwishlist",protect, async (req, res, next) => {
   adWishList(req,res,next);
 });
 
-router.get("/getWishList",async(req,res,next)=>{
+router.get("/getWishList",protect,async(req,res,next)=>{
   getWishList(req,res,next);
 })
 
-router.delete("/deletewishlist",async(req,res,next)=>{
+router.delete("/deletewishlist",protect, async(req,res,next)=>{
   deleteWishList(req,res,next);
 })
 
