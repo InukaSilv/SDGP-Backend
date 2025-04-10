@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const app = express();
 const mongoose = require('mongoose');
 const { handleWebhook } = require('./controllers/paymentcontroller');
 const authRoutes = require('./routes/authRoutes');
@@ -10,23 +11,27 @@ const messageRoutes = require("./routes/messagesChatRoute");
 const wishlistRoutes = require("./routes/wishlistRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 const admin = require('./config/firebaseAdmin'); 
-const cors = require('cors');
+const cors = require("cors");
 const http = require("http");
 const socket = require("socket.io");
 const {initializeSocket} = require("./controllers/listingcontroller");
 const chatbotRoutes = require('./routes/chatbotRoutes');
 
-const app = express();
 const server = http.createServer(app);
 
-app.post(
-  "/api/payments/webhook",
-  express.raw({ type: "application/json" }),
-  handleWebhook
-);
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.NODE_ENV === "production"
+      ? "https://www.rivvelk.com"
+      : "http://localhost:5173",
+    credentials: true
+  }));
+  
+
+
+app.post("/api/payments/webhook", express.raw({ type: "application/json" }), handleWebhook);
+
 app.use(express.json());
 
 // Initialize Socket.io for listings
@@ -36,7 +41,7 @@ initializeSocket(server);
 app.use('/api/auth', authRoutes);
 app.use('/api/listing', LstRoutes);
 app.use("/api/admin", adminAuthRoute);
-app.use("/api/wishlist", wishlistRoutes)
+app.use("/api/wishlist", wishlistRoutes);
 app.use("/api/payments", paymentRoutes);
 // Chat routes from index.js
 app.use("/api/auth", userRoutes);

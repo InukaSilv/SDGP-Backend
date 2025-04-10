@@ -6,7 +6,6 @@ const { protect } = require("../middlewares/authMiddleware");
 // Route to create a Stripe payment intent
 router.post("/create-checkout-session", protect, createCheckoutSession);
 
-router.post('/webhook', express.raw({ type: 'application/json' }), handleWebhook);
 
 // Route to get payment history
 router.get("/history", protect, getPaymentHistory);
